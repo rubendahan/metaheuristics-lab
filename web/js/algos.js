@@ -1,55 +1,81 @@
-// Live, canvas-drawable implementations of each metaheuristic for the demos.
-// These mirror the Python package one-to-one but are written to be *watched*:
-// one step() per animation frame, with draw() showing the search state.
-import { makeMapper, rngFrom, gauss, TWO_PI } from "./landscape.js";
+// The metaheuristics, instrumented for slow, legible animation. Each exposes:
+//   step()   advance one discrete iteration
+//   frame()  fully-resolved geometry {dots, rings, links} in domain coords,
+//            with the defining OPERATOR drawn explicitly (the forces, the
+//            difference vector, the crossover, the Metropolis move)
+//   info()   live scalar state for the maths panel  [[label, value], ...]
+//   status() one short sentence of narration
+// The harness tweens between successive frame()s, so motion stays smooth.
+import { rngFrom, gauss } from "./landscape.js";
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const COL = { agent: "#5ec8ff", de: "#c8a6ff", best: "#ffffff", cog: "#56d364", soc: "#5ec8ff", diff: "#d2a8ff", warm: "#f0b72f", reject: "#ff7b72" };
+
+function spread(pts, fn) {
+  let mx = 0, my = 0; for (const p of pts) { mx += p.x; my += p.y; }
+  mx /= pts.length; my /= pts.length;
+  let s = 0; for (const p of pts) s += Math.hypot(p.x - mx, p.y - my);
+  return (s / pts.length) / (fn.hi - fn.lo);
+}
 
 // ============================================================ PSO
 export function createPSO(fn, p) {
   const rand = rngFrom(p.seed ?? 12345);
-  const n = p.n | 0;
-  const parts = [];
+  const n = p.n | 0, parts = [];
   for (let i = 0; i < n; i++) {
-    const x = fn.lo + rand() * (fn.hi - fn.lo);
-    const y = fn.lo + rand() * (fn.hi - fn.lo);
+    const x = fn.lo + rand() * (fn.hi - fn.lo), y = fn.lo + rand() * (fn.hi - fn.lo);
     parts.push({ x, y, vx: 0, vy: 0, px: x, py: y, pf: fn.f(x, y) });
   }
   let gx = parts[0].x, gy = parts[0].y, gf = Infinity;
   for (const pt of parts) if (pt.pf < gf) { gf = pt.pf; gx = pt.px; gy = pt.py; }
 
   return {
-    iter: 0,
+    iter: 0, params: p, stepsPerTick: 1,
     get best() { return gf; },
-    params: p,
+    status() {
+      const s = spread(parts, fn);
+      if (this.iter === 0) return "Initialised: positions xᵢ ~ U(box), velocities vᵢ = 0.";
+      if (s > 0.25) return "Inertia dominates: the swarm explores broadly.";
+      if (s > 0.09) return "The social term pulls particles toward ĝ; the swarm contracts.";
+      return "Velocities → 0. Converged on the incumbent ĝ.";
+    },
     step() {
       this.iter++;
-      const { w, c1, c2 } = this.params;
-      const vmax = 0.25 * (fn.hi - fn.lo);
+      const { w, c1, c2 } = this.params, vmax = 0.3 * (fn.hi - fn.lo);
       for (const pt of parts) {
-        const r1 = rand(), r2 = rand(), r3 = rand(), r4 = rand();
-        pt.vx = w * pt.vx + c1 * r1 * (pt.px - pt.x) + c2 * r2 * (gx - pt.x);
-        pt.vy = w * pt.vy + c1 * r3 * (pt.py - pt.y) + c2 * r4 * (gy - pt.y);
-        pt.vx = clamp(pt.vx, -vmax, vmax);
-        pt.vy = clamp(pt.vy, -vmax, vmax);
-        pt.x = clamp(pt.x + pt.vx, fn.lo, fn.hi);
-        pt.y = clamp(pt.y + pt.vy, fn.lo, fn.hi);
+        pt.vx = w * pt.vx + c1 * rand() * (pt.px - pt.x) + c2 * rand() * (gx - pt.x);
+        pt.vy = w * pt.vy + c1 * rand() * (pt.py - pt.y) + c2 * rand() * (gy - pt.y);
+        pt.vx = clamp(pt.vx, -vmax, vmax); pt.vy = clamp(pt.vy, -vmax, vmax);
+        pt.x = clamp(pt.x + pt.vx, fn.lo, fn.hi); pt.y = clamp(pt.y + pt.vy, fn.lo, fn.hi);
         const f = fn.f(pt.x, pt.y);
         if (f < pt.pf) { pt.pf = f; pt.px = pt.x; pt.py = pt.y; if (f < gf) { gf = f; gx = pt.x; gy = pt.y; } }
       }
     },
-    draw(ctx, map) {
-      for (const pt of parts) {
-        const [sx, sy] = map.toPx(pt.x, pt.y);
-        // velocity vector
-        const [vx2, vy2] = map.toPx(pt.x + pt.vx * 2, pt.y + pt.vy * 2);
-        ctx.strokeStyle = "rgba(88,166,255,0.45)";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(vx2, vy2); ctx.stroke();
-        ctx.fillStyle = "#58a6ff";
-        ctx.beginPath(); ctx.arc(sx, sy, 3.2, 0, TWO_PI); ctx.fill();
-      }
-      drawBest(ctx, map, gx, gy);
+    info() {
+      return [["best f(ĝ)", gf.toExponential(2)], ["w", (+this.params.w).toFixed(2)],
+        ["c₁ / c₂", `${(+this.params.c1).toFixed(1)} / ${(+this.params.c2).toFixed(1)}`],
+        ["swarm spread", spread(parts, fn).toFixed(3)]];
+    },
+    frame() {
+      const h = parts[0];
+      // faint velocity field vᵢ on every particle (one step ahead), then the
+      // two named forces drawn as bold arrows on the highlighted particle.
+      const vel = parts.map((pt) => ({
+        x1: pt.x, y1: pt.y, x2: pt.x + pt.vx, y2: pt.y + pt.vy,
+        color: "#9fd8ff", width: 1, alpha: 0.3, vel: true,
+      }));
+      return {
+        dots: parts.map((pt) => ({ x: pt.x, y: pt.y, r: 3.6, color: COL.agent })),
+        links: [
+          ...vel,
+          { x1: h.x, y1: h.y, x2: h.px, y2: h.py, color: COL.cog, width: 2.2, arrow: true, glow: true, label: "c₁ → pᵢ (cognitive)" },
+          { x1: h.x, y1: h.y, x2: gx, y2: gy, color: COL.soc, width: 2.2, arrow: true, glow: true, label: "c₂ → ĝ (social)" },
+        ],
+        rings: [
+          { x: h.x, y: h.y, r: 6, color: COL.warm, label: "particle xᵢ" },
+          { x: gx, y: gy, r: 7, color: COL.best, label: "ĝ best" },
+        ],
+      };
     },
   };
 }
@@ -60,58 +86,65 @@ export function createGA(fn, p) {
   const n = p.n | 0;
   let pop = [];
   for (let i = 0; i < n; i++) {
-    const x = fn.lo + rand() * (fn.hi - fn.lo);
-    const y = fn.lo + rand() * (fn.hi - fn.lo);
+    const x = fn.lo + rand() * (fn.hi - fn.lo), y = fn.lo + rand() * (fn.hi - fn.lo);
     pop.push({ x, y, f: fn.f(x, y) });
   }
   let best = pop.reduce((a, b) => (a.f < b.f ? a : b));
-  let lastChildren = [];
+  let mating = null; // {p1, p2, child} for the operator highlight
 
-  const tournament = (k) => {
-    let win = pop[(rand() * n) | 0];
-    for (let j = 1; j < k; j++) { const c = pop[(rand() * n) | 0]; if (c.f < win.f) win = c; }
-    return win;
-  };
+  const tour = (k) => { let w = pop[(rand() * n) | 0]; for (let j = 1; j < k; j++) { const c = pop[(rand() * n) | 0]; if (c.f < w.f) w = c; } return w; };
 
   return {
-    iter: 0,
+    iter: 0, params: p, stepsPerTick: 1,
     get best() { return best.f; },
-    params: p,
+    status() {
+      const s = spread(pop, fn);
+      if (this.iter === 0) return "Generation 0: a uniform random population.";
+      if (s > 0.22) return "Tournament selection + BLX-α crossover; population still diverse.";
+      if (s > 0.07) return "Selection pressure concentrates the gene pool.";
+      return "Population converged; elitism preserves the incumbent.";
+    },
     step() {
       this.iter++;
       const { mut, k } = this.params;
       pop.sort((a, b) => a.f - b.f);
-      const next = [{ ...pop[0] }, { ...pop[1] }]; // elitism
-      lastChildren = [];
+      const next = [{ ...pop[0] }, { ...pop[1] }];        // elitism
       const sigma = mut * (fn.hi - fn.lo);
+      const blx = (u, v) => { const lo = Math.min(u, v), hi = Math.max(u, v), d = (hi - lo) * 0.5; return clamp(lo - d + rand() * (hi - lo + 2 * d), fn.lo, fn.hi); };
+      let firstMate = null;
       while (next.length < n) {
-        const a = tournament(k), b = tournament(k);
-        // BLX-0.5 crossover
-        const blx = (u, v) => {
-          const lo = Math.min(u, v), hi = Math.max(u, v), d = (hi - lo) * 0.5;
-          return clamp(lo - d + rand() * (hi - lo + 2 * d), fn.lo, fn.hi);
-        };
+        const a = tour(k), b = tour(k);
         for (let c = 0; c < 2 && next.length < n; c++) {
           let cx = blx(a.x, b.x), cy = blx(a.y, b.y);
           if (rand() < 0.5) cx = clamp(cx + gauss(rand) * sigma, fn.lo, fn.hi);
           if (rand() < 0.5) cy = clamp(cy + gauss(rand) * sigma, fn.lo, fn.hi);
           const child = { x: cx, y: cy, f: fn.f(cx, cy) };
-          next.push(child); lastChildren.push(child);
-          if (child.f < best.f) best = child;
+          next.push(child); if (child.f < best.f) best = child;
+          if (!firstMate) firstMate = { p1: a, p2: b, child };
         }
       }
-      pop = next;
+      mating = firstMate; pop = next;
     },
-    draw(ctx, map) {
-      // colour by rank: brighter = fitter
-      const sorted = [...pop].sort((a, b) => a.f - b.f);
-      sorted.forEach((pt, i) => {
-        const [sx, sy] = map.toPx(pt.x, pt.y);
-        const t = i / sorted.length;
-        ctx.fillStyle = `rgba(${86 + t * 120},${211 - t * 120},${99},0.9)`;
-        ctx.beginPath(); ctx.arc(sx, sy, 3.4, 0, TWO_PI); ctx.fill();
+    info() {
+      return [["best f", best.f.toExponential(2)], ["pop size", n],
+        ["tournament k", this.params.k | 0], ["diversity", spread(pop, fn).toFixed(3)]];
+    },
+    frame() {
+      const sorted = [...pop].sort((a, b) => b.f - a.f);
+      const dots = sorted.map((pt) => {
+        const rank = 1 - sorted.indexOf(pt) / sorted.length;
+        return { x: pt.x, y: pt.y, r: 3.6, color: `rgb(${90 + rank * 110},${225 - rank * 40},110)` };
       });
-      drawBest(ctx, map, best.x, best.y);
+      const rings = [{ x: best.x, y: best.y, r: 7, color: COL.best, label: "elite" }];
+      const links = [];
+      if (mating) {
+        rings.push({ x: mating.p1.x, y: mating.p1.y, r: 5, color: COL.warm, label: "parent" });
+        rings.push({ x: mating.p2.x, y: mating.p2.y, r: 5, color: COL.warm });
+        rings.push({ x: mating.child.x, y: mating.child.y, r: 5, color: COL.cog, label: "child" });
+        links.push({ x1: mating.p1.x, y1: mating.p1.y, x2: mating.child.x, y2: mating.child.y, color: COL.cog, width: 1.7, dash: [4, 4], arrow: true });
+        links.push({ x1: mating.p2.x, y1: mating.p2.y, x2: mating.child.x, y2: mating.child.y, color: COL.cog, width: 1.7, dash: [4, 4], arrow: true });
+      }
+      return { dots, rings, links };
     },
   };
 }
@@ -119,24 +152,28 @@ export function createGA(fn, p) {
 // ============================================================ Differential Evolution
 export function createDE(fn, p) {
   const rand = rngFrom(p.seed ?? 2024);
-  const n = p.n | 0;
-  const pop = [];
+  const n = p.n | 0, pop = [];
   for (let i = 0; i < n; i++) {
-    const x = fn.lo + rand() * (fn.hi - fn.lo);
-    const y = fn.lo + rand() * (fn.hi - fn.lo);
+    const x = fn.lo + rand() * (fn.hi - fn.lo), y = fn.lo + rand() * (fn.hi - fn.lo);
     pop.push({ x, y, f: fn.f(x, y) });
   }
   let bi = 0; for (let i = 1; i < n; i++) if (pop[i].f < pop[bi].f) bi = i;
-  let trials = [];
+  let demo = null, meanDiff = 0;
 
   return {
-    iter: 0,
+    iter: 0, params: p, stepsPerTick: 1,
     get best() { return pop[bi].f; },
-    params: p,
+    status() {
+      const s = spread(pop, fn);
+      if (this.iter === 0) return "rand/1/bin. Watch the step size scale itself to the population.";
+      if (s > 0.2) return "Wide population → large difference vectors → big exploratory moves.";
+      if (s > 0.06) return "As the cloud contracts, |x_b − x_c| shrinks: steps self-scale down.";
+      return "Differences ≈ 0: refinement only. Converged.";
+    },
     step() {
       this.iter++;
       const { F, CR } = this.params;
-      trials = [];
+      let diffSum = 0;
       for (let i = 0; i < n; i++) {
         let a, b, c;
         do { a = (rand() * n) | 0; } while (a === i);
@@ -144,21 +181,31 @@ export function createDE(fn, p) {
         do { c = (rand() * n) | 0; } while (c === i || c === a || c === b);
         const donx = clamp(pop[a].x + F * (pop[b].x - pop[c].x), fn.lo, fn.hi);
         const dony = clamp(pop[a].y + F * (pop[b].y - pop[c].y), fn.lo, fn.hi);
-        const jx = rand() < CR || rand() < 0.5;
-        const tx = jx ? donx : pop[i].x;
-        const ty = !jx ? dony : (rand() < CR ? dony : pop[i].y);
+        diffSum += Math.hypot(pop[b].x - pop[c].x, pop[b].y - pop[c].y);
+        const tx = rand() < CR ? donx : pop[i].x, ty = rand() < CR ? dony : pop[i].y;
         const tf = fn.f(tx, ty);
-        trials.push({ x: tx, y: ty, i });
+        if (i === 0) demo = { a: pop[a], b: pop[b], c: pop[c], donor: { x: donx, y: dony }, target: pop[i] };
         if (tf <= pop[i].f) { pop[i] = { x: tx, y: ty, f: tf }; if (tf < pop[bi].f) bi = i; }
       }
+      meanDiff = diffSum / n;
     },
-    draw(ctx, map) {
-      for (const pt of pop) {
-        const [sx, sy] = map.toPx(pt.x, pt.y);
-        ctx.fillStyle = "#d2a8ff";
-        ctx.beginPath(); ctx.arc(sx, sy, 3.2, 0, TWO_PI); ctx.fill();
+    info() {
+      return [["best f", pop[bi].f.toExponential(2)], ["F", (+this.params.F).toFixed(2)],
+        ["CR", (+this.params.CR).toFixed(2)], ["mean |x_b−x_c|", meanDiff.toFixed(3)]];
+    },
+    frame() {
+      const dots = pop.map((pt) => ({ x: pt.x, y: pt.y, r: 3.4, color: COL.de }));
+      const rings = [{ x: pop[bi].x, y: pop[bi].y, r: 7, color: COL.best, label: "best" }];
+      const links = [];
+      if (demo) {
+        rings.push({ x: demo.a.x, y: demo.a.y, r: 5, color: COL.warm, label: "xₐ (base)" });
+        rings.push({ x: demo.b.x, y: demo.b.y, r: 4.5, color: COL.diff, label: "x_b" });
+        rings.push({ x: demo.c.x, y: demo.c.y, r: 4.5, color: COL.diff, label: "x_c" });
+        rings.push({ x: demo.donor.x, y: demo.donor.y, r: 6, color: COL.cog, label: "donor xₐ+F(x_b−x_c)" });
+        links.push({ x1: demo.c.x, y1: demo.c.y, x2: demo.b.x, y2: demo.b.y, color: COL.diff, width: 1.9, dash: [5, 4], arrow: true, label: "x_b − x_c" });
+        links.push({ x1: demo.a.x, y1: demo.a.y, x2: demo.donor.x, y2: demo.donor.y, color: COL.cog, width: 2.1, arrow: true, glow: true });
       }
-      drawBest(ctx, map, pop[bi].x, pop[bi].y);
+      return { dots, rings, links };
     },
   };
 }
@@ -166,55 +213,42 @@ export function createDE(fn, p) {
 // ============================================================ Simulated Annealing
 export function createSA(fn, p) {
   const rand = rngFrom(p.seed ?? 99);
-  let x = fn.lo + rand() * (fn.hi - fn.lo);
-  let y = fn.lo + rand() * (fn.hi - fn.lo);
-  let fx = fn.f(x, y);
-  let bx = x, by = y, bf = fx;
-  const trail = [[x, y, true]];
-  let T = p.T0;
+  let x = fn.lo + rand() * (fn.hi - fn.lo), y = fn.lo + rand() * (fn.hi - fn.lo);
+  let fx = fn.f(x, y), bx = x, by = y, bf = fx;
+  let T = p.T0, lastD = 0, lastP = 1, lastAcc = true;
+  const trail = [{ x, y, acc: true }];
 
   return {
-    iter: 0,
-    get best() { return bf; },
-    get temp() { return T; },
-    params: p,
+    iter: 0, params: p, stepsPerTick: 3, trail,
+    get best() { return bf; }, get temp() { return T; },
+    status() {
+      if (this.iter === 0) return "Single walker. Worse moves accepted w.p. exp(−ΔE/T).";
+      if (T > p.T0 * 0.15) return lastAcc && lastD > 0 ? "Hot: accepted an uphill move (ΔE>0). Escaping a basin." : "Hot: exploring widely.";
+      return "Cooled: ΔE>0 almost always rejected. Descending into a basin.";
+    },
     step() {
       this.iter++;
       const { T0, cool } = this.params;
-      const step = 0.18 * (fn.hi - fn.lo) * Math.sqrt(Math.max(T / T0, 1e-3));
-      const nx = clamp(x + gauss(rand) * step, fn.lo, fn.hi);
-      const ny = clamp(y + gauss(rand) * step, fn.lo, fn.hi);
-      const nf = fn.f(nx, ny);
-      const d = nf - fx;
-      const accept = d < 0 || rand() < Math.exp(-d / Math.max(T, 1e-9));
-      if (accept) { x = nx; y = ny; fx = nf; if (fx < bf) { bf = fx; bx = x; by = y; } }
-      trail.push([x, y, accept]);
-      if (trail.length > 120) trail.shift();
-      T *= cool;
-      if (T < T0 * 1e-4) T = T0 * 1e-4;
+      const s = 0.16 * (fn.hi - fn.lo) * Math.sqrt(Math.max(T / T0, 1e-3));
+      const nx = clamp(x + gauss(rand) * s, fn.lo, fn.hi), ny = clamp(y + gauss(rand) * s, fn.lo, fn.hi);
+      const nf = fn.f(nx, ny), d = nf - fx;
+      lastD = d; lastP = d < 0 ? 1 : Math.exp(-d / Math.max(T, 1e-9));
+      lastAcc = d < 0 || rand() < lastP;
+      if (lastAcc) { x = nx; y = ny; fx = nf; if (fx < bf) { bf = fx; bx = x; by = y; } }
+      trail.push({ x, y, acc: lastAcc }); if (trail.length > 90) trail.shift();
+      T *= cool; if (T < T0 * 1e-4) T = T0 * 1e-4;
     },
-    draw(ctx, map) {
-      ctx.lineWidth = 1.4;
-      for (let i = 1; i < trail.length; i++) {
-        const [x0, y0] = trail[i - 1], [x1, y1, acc] = trail[i];
-        const [a0, b0] = map.toPx(x0, y0), [a1, b1] = map.toPx(x1, y1);
-        const alpha = i / trail.length;
-        ctx.strokeStyle = acc ? `rgba(240,183,47,${0.25 + 0.6 * alpha})` : `rgba(255,123,114,${0.2 + 0.3 * alpha})`;
-        ctx.beginPath(); ctx.moveTo(a0, b0); ctx.lineTo(a1, b1); ctx.stroke();
-      }
-      const [cx, cy] = map.toPx(x, y);
-      ctx.fillStyle = "#f0b72f";
-      ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, TWO_PI); ctx.fill();
-      drawBest(ctx, map, bx, by);
+    info() {
+      return [["best f", bf.toExponential(2)], ["temperature T", T.toFixed(3)],
+        ["last ΔE", (lastD >= 0 ? "+" : "") + lastD.toFixed(3)],
+        ["P(accept) = e^(−ΔE/T)", lastD < 0 ? "1.00 (downhill)" : lastP.toFixed(3)]];
+    },
+    frame() {
+      return {
+        dots: [{ x, y, r: 5.5, color: COL.warm, glow: true }],
+        rings: [{ x: bx, y: by, r: 7, color: COL.best, label: "best" }, { x, y, r: 0.1, color: COL.warm, label: "walker" }],
+        links: [],
+      };
     },
   };
-}
-
-function drawBest(ctx, map, x, y) {
-  const [sx, sy] = map.toPx(x, y);
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(sx, sy, 6.5, 0, TWO_PI); ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.beginPath(); ctx.arc(sx, sy, 2, 0, TWO_PI); ctx.fill();
 }

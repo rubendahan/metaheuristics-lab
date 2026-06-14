@@ -3,510 +3,1074 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Metaheuristics, Explained — PSO, GA, DE, SA & Bayesian Optimization</title>
-  <meta name="description" content="An interactive, visual introduction to the metaheuristics behind black-box optimization: particle swarm, genetic algorithms, differential evolution, simulated annealing, CMA-ES and Bayesian optimization. Live in-browser demos." />
+  <title>Black-box optimization, visualized · metaheuristics from the Delta hackathon</title>
+  <meta name="description" content="An interactive, math-forward tour of the metaheuristics we used at the Delta 2026 hackathon: particle swarm, genetic algorithms, differential evolution, simulated annealing, CMA-ES and Bayesian optimization. Update rules, pseudocode, and live in-browser demos that show each operator." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- KaTeX for typeset math (CDN, no build step) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+    onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}], throwOnError:false});"></script>
 </head>
 <body>
 
 <header class="hero">
   <div class="wrap">
-    <div class="kicker">metaheuristics, explained</div>
-    <h1>How to find a needle<br />in a billion-dimensional haystack.</h1>
+    <div class="kicker">🐝 a Delta 2026 hackathon spin-off</div>
+    <h1>Optimizing a function<br /><span class="grad">you're not allowed to differentiate.</span></h1>
     <p class="sub">
-      When you cannot write down a gradient — when all you can do is <em>try a
-      solution and measure how good it is</em> — you reach for a metaheuristic.
-      This is a visual, hands-on tour of the ones worth knowing, each running
-      live in your browser.
+      No gradient, no convexity, no closed form. Just a budget of evaluations and a
+      score. This is a math-forward, interactive tour of the metaheuristics built for
+      exactly that regime, with each update rule shown running live.
     </p>
     <div class="tags">
+      <span class="tag on">live demos</span>
       <span class="tag">particle swarm</span>
       <span class="tag">genetic algorithm</span>
       <span class="tag">differential evolution</span>
       <span class="tag">simulated annealing</span>
       <span class="tag">CMA-ES</span>
-      <span class="tag">bayesian optimization</span>
+      <span class="tag">bayesian opt</span>
     </div>
   </div>
 </header>
 
 <nav class="toc">
   <div class="wrap">
-    <a href="#intro">the problem</a>
-    <a href="#pso">particle swarm</a>
-    <a href="#ga">genetic algo</a>
-    <a href="#de">diff. evolution</a>
-    <a href="#sa">annealing</a>
+    <a href="#why">the problem</a>
+    <a href="#trap">local minima</a>
+    <a href="#pso">PSO</a>
+    <a href="#ga">GA</a>
+    <a href="#de">DE</a>
+    <a href="#sa">SA</a>
     <a href="#cmaes">CMA-ES</a>
-    <a href="#bayes">bayesian opt</a>
-    <a href="#compare">which to use</a>
-    <a href="#story">the story</a>
+    <a href="#bayes">bayesian</a>
+    <a href="#pick">no free lunch</a>
+    <a href="#twist">the twist</a>
   </div>
 </nav>
 
 <main class="wrap">
 
-<!-- ============================ INTRO ============================ -->
-<section id="intro">
-  <h2><span class="num">00</span> The black-box problem</h2>
-  <p class="lede">Minimize a function you are not allowed to look inside.</p>
+<!-- shared arrowhead markers for all schematic figures -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah-gold"   viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#f0b72f"/></marker>
+  <marker id="ah-green"  viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#56d364"/></marker>
+  <marker id="ah-blue"   viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5ec8ff"/></marker>
+  <marker id="ah-white"  viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e8eef6"/></marker>
+  <marker id="ah-purple" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#d2a8ff"/></marker>
+  <marker id="ah-red"    viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#ff7b72"/></marker>
+  <marker id="ah-dim"    viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9aa6b2"/></marker>
+</defs></svg>
+
+<!-- ===================== WHY ===================== -->
+<section id="why">
+  <h2><span class="num">00</span> The black box we were handed</h2>
+  <p class="lede">Minimize <span class="vec">f</span> : ℝ<sup>d</sup> → ℝ, given nothing but the right to query it.</p>
 
   <p>
-    Formally we want <code>x* = argmin f(x)</code> over some search space. Classical
-    optimization assumes <em>structure</em>: a gradient <code>∇f</code> to follow
-    downhill, convexity to guarantee the bottom is global, an algebraic form to
-    differentiate. Strip all of that away and you are left with the
-    <strong>black box</strong>: you may submit a candidate <code>x</code> and
-    receive a single number <code>f(x)</code>. Nothing else.
+    All of this came out of <b>Delta 2026</b>, a hackathon. Task D: retime the traffic
+    signals of a real city so a fleet of vehicles loses as little time as possible
+    over a four-hour simulation. There was no analytic objective. There was a
+    mesoscopic traffic simulator. You submit a full signal plan, it runs the city,
+    and it returns a single scalar (total delay). Lower is better.
   </p>
 
-  <p>This is the rule, not the exception. The "function" might be:</p>
-  <ul>
-    <li>a <strong>physics simulation</strong> scored by an outcome (our traffic case below);</li>
-    <li>a machine-learning model's validation loss as a function of its hyperparameters;</li>
-    <li>a wind-tunnel test, a chemistry assay, a render farm — anything where the
-      output is real but the math is opaque.</li>
-  </ul>
-
-  <p>
-    Two things make it hard. First, <strong>dimensionality</strong>: the volume
-    of a search space explodes exponentially, so you can never grid it. Second,
-    <strong>multimodality</strong>: the landscape is riddled with local minima —
-    valleys that look like the bottom until you climb out and find a deeper one.
-  </p>
-
-  <div class="callout">
-    <strong>The metaheuristic bargain.</strong> None of these methods guarantee the
-    global optimum (in general, nothing can without exhausting the space). They are
-    <em>heuristics</em>: clever, biologically- or physically-inspired sampling
-    strategies that spend a fixed budget of evaluations to find a <em>very good</em>
-    solution with high probability. The whole game is the tension between
-    <strong>exploration</strong> (cover new ground) and <strong>exploitation</strong>
-    (refine what already looks good). Every algorithm below is a different answer to
-    that one tension.
+  <div class="stats">
+    <div class="stat-card"><div class="big">341</div><div class="lbl">signals (the decision vector)</div></div>
+    <div class="stat-card"><div class="big">5,215</div><div class="lbl">vehicles simulated</div></div>
+    <div class="stat-card"><div class="big">14,400 s</div><div class="lbl">simulated per evaluation</div></div>
+    <div class="stat-card"><div class="big">~5 s</div><div class="lbl">wall-clock per query</div></div>
   </div>
 
+  <h3>What "black box" means here</h3>
   <p>
-    Throughout, we visualize on 2-D landscapes you can see — but the same code runs
-    in any dimension. The white crosshair marks the true global optimum; watch how
-    each method hunts for it. <strong>Drag the sliders while it runs.</strong>
+    You hand the objective a full decision vector and it hands back one number. You do
+    not get a formula, a derivative, or any look inside. The only way to learn anything
+    is to ask — and every question costs five seconds of simulation:
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 168" role="img" aria-label="A decision vector enters a simulator, which returns a single scalar.">
+      <!-- input vector -->
+      <g>
+        <rect x="34" y="40" width="40" height="78" rx="6" fill="#101826" stroke="#263041"/>
+        <line x1="34" y1="59.5" x2="74" y2="59.5" class="grid"/>
+        <line x1="34" y1="79"   x2="74" y2="79"   class="grid"/>
+        <line x1="34" y1="98.5" x2="74" y2="98.5" class="grid"/>
+        <text x="54" y="54" font-size="9.5" fill="#a3b0c2" text-anchor="middle">g&#8321;</text>
+        <text x="54" y="73.5" font-size="9.5" fill="#a3b0c2" text-anchor="middle">g&#8322;</text>
+        <text x="54" y="93" font-size="9.5" fill="#a3b0c2" text-anchor="middle">&#8942;</text>
+        <text x="54" y="112" font-size="9.5" fill="#a3b0c2" text-anchor="middle">g&#8344;</text>
+        <text x="54" y="136" font-size="11" fill="#58a6ff" text-anchor="middle">x &#8712; &#8477;&#179;&#8308;&#185;</text>
+      </g>
+      <!-- arrow in -->
+      <line x1="80" y1="79" x2="156" y2="79" class="axis" marker-end="url(#ah-dim)"/>
+      <text x="118" y="70" font-size="10" class="muted" text-anchor="middle">submit plan</text>
+      <!-- the box -->
+      <rect x="162" y="44" width="156" height="70" rx="12" fill="#131c2c" stroke="#37425a"/>
+      <text x="240" y="72" font-size="12.5" fill="#e8eef6" text-anchor="middle" font-weight="650">city simulator</text>
+      <text x="240" y="90" font-size="10" class="muted" text-anchor="middle">4 h of traffic, 5,215 cars</text>
+      <text x="240" y="130" font-size="9.5" class="muted" text-anchor="middle">opaque &#183; no gradient &#183; ~5 s / query</text>
+      <!-- arrow out -->
+      <line x1="324" y1="79" x2="396" y2="79" class="axis" marker-end="url(#ah-gold)"/>
+      <text x="360" y="70" font-size="10" class="muted" text-anchor="middle">returns</text>
+      <!-- scalar out -->
+      <circle cx="430" cy="79" r="22" fill="none" stroke="#f0b72f" stroke-width="1.6"/>
+      <text x="430" y="84" font-size="14" fill="#f0b72f" text-anchor="middle" font-weight="700">f(x)</text>
+      <text x="430" y="130" font-size="9.5" class="muted" text-anchor="middle">total delay</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig.</b> — the whole interface: a 341-number plan goes in, one scalar comes out.
+    No internal structure is exposed, so classical tools that need \(\nabla f\) — gradient
+    descent, Newton, linear programming — simply do not apply.
+  </p>
+
+  <p>
+    That makes the objective <b>black-box, high-dimensional, and expensive</b> all at
+    once. You cannot enumerate (the configuration space is astronomically large), you
+    cannot follow a gradient (there is none to compute), and you cannot afford many
+    evaluations. This is the exact niche of <b>metaheuristics</b>: stochastic search
+    strategies that trade optimality guarantees for a very good solution within a fixed
+    budget. Each one is a different policy for the same dilemma,
+    <b>exploration versus exploitation</b> — sampling unknown regions versus refining the
+    best one found so far. The sections below show each policy as an update rule, a
+    schematic, and a demo you can drive.
   </p>
 </section>
 
-<!-- ============================ PSO ============================ -->
-<section id="pso">
-  <h2><span class="num">01</span> Particle Swarm Optimization</h2>
-  <p class="lede">A flock of candidates, pulled between memory and consensus.</p>
+<!-- ===================== THE TRAP ===================== -->
+<section id="trap">
+  <h2><span class="num">01</span> Why local descent is not enough</h2>
+  <p class="lede">One picture sets up everything.</p>
 
+  <h3>Greedy descent, and where it stops</h3>
   <p>
-    PSO (Kennedy &amp; Eberhart, 1995) was inspired by the way a flock of birds or
-    a school of fish finds food: no individual knows where the food is, yet the
-    group converges on it through purely local rules. Each <strong>particle</strong>
-    is a candidate solution flying through the search space with a position and a
-    velocity. Two memories steer it:
+    Suppose, just for a moment, that you <em>could</em> differentiate. The obvious move
+    is gradient descent: from wherever you are, take a small step straight downhill, and
+    repeat until the slope flattens to zero.
   </p>
-  <ul>
-    <li><strong>p</strong> — its own best position ever (the <em>cognitive</em> pull:
-      "go back to the best I personally found");</li>
-    <li><strong>g</strong> — the best position any particle has found (the
-      <em>social</em> pull: "drift toward what the swarm agrees is good").</li>
-  </ul>
 
-  <p>Every step, each particle updates its velocity then moves:</p>
-  <div class="formula">
-    v ← <span class="hl-i">w·v</span> + <span class="hl-c">c₁·r₁·(p − x)</span> + <span class="hl-s">c₂·r₂·(g − x)</span><br />
-    x ← x + v
-    <div class="small">r₁, r₂ ~ U(0,1) fresh each step &nbsp;·&nbsp; <span class="hl-i">inertia</span> &nbsp; <span class="hl-c">cognitive</span> &nbsp; <span class="hl-s">social</span></div>
+  <div class="mathblock">
+    $$ x \;\leftarrow\; x - \eta\, f'(x), \qquad\text{stop when } f'(x) = 0 $$
   </div>
+  <p class="fignote">
+    \(\eta\) is the step size. The update only ever moves toward lower \(f\), so it can
+    halt at <em>any</em> point where the slope vanishes — a global minimum, yes, but
+    equally a local one.
+  </p>
 
   <p>
-    Those three terms <em>are</em> the explore/exploit dial. The
-    <span style="color:var(--accent-5)"><strong>inertia w</strong></span> is
-    momentum: high <code>w</code> keeps particles roaming (exploration), low
-    <code>w</code> lets them settle (exploitation) — which is why a good PSO
-    <em>anneals</em> <code>w</code> from ~0.9 down to ~0.4 over the run. The
-    <span style="color:var(--accent-3)"><strong>cognitive c₁</strong></span> pulls
-    toward personal memory; the
-    <span style="color:var(--accent)"><strong>social c₂</strong></span> toward the
-    group's best. Crank <code>c₂</code> up and the swarm collapses onto the first
-    decent point it finds — fast, but easily a local trap.
+    Below is a 1-D objective with several dips of different depths. Each gray point
+    starts at a fixed spot and runs exactly that update. The coloured trail traces where
+    it ends up — reliably <i>a</i> minimum, namely the nearest one, with no knowledge
+    that a deeper basin exists elsewhere.
+  </p>
+
+  <div class="demo" data-demo="trap"></div>
+  <p class="caption">
+    <b>fig.</b> — thirteen greedy descents on one bumpy objective. Each settles into the
+    basin it happened to start in; only the few that began inside the global basin
+    (green) reach the true optimum, the rest stop short (red).
+  </p>
+
+  <p>
+    The <b>basin of attraction</b> each point lands in is decided entirely by where it
+    started. For a convex objective there is only one basin and this is fine. For a
+    multimodal one, local descent is just a lucky dip into whatever basin you happened to
+    initialise inside.
+  </p>
+
+  <div class="callout">
+    <span class="h">This is the design problem.</span>
+    Every method below adds a mechanism to escape or avoid local minima: a population
+    that samples many basins at once, stochastic acceptance of uphill moves, a
+    self-adapting step, or a probabilistic model of where to look next. Keep the
+    explore/exploit tension in mind; it is the axis every one of them is tuned along.
+  </div>
+</section>
+
+<!-- ===================== PSO ===================== -->
+<section id="pso">
+  <h2><span class="num">02</span> Particle Swarm Optimization</h2>
+  <p class="lede">A population of velocity-driven particles, coupled through a shared best.</p>
+
+  <h3>The idea</h3>
+  <p>
+    Scatter a handful of particles across the search space and let each one fly. A
+    particle remembers the best place <em>it</em> has personally visited, and the swarm
+    broadcasts the best place <em>anyone</em> has visited. Every step, each particle is
+    nudged toward both of those points — while keeping some of the momentum it already
+    had. That is the entire method: no gradient, just three competing tugs on a moving
+    point.
+  </p>
+
+  <h3>One particle's update</h3>
+  <p>
+    Particle \(i\) carries a position \(\mathbf{x}_i\) and a velocity \(\mathbf{v}_i\).
+    The velocity is rebuilt each iteration from three terms — the
+    <strong style="color:var(--gold)">inertia</strong> it already had, a
+    <strong style="color:var(--green)">cognitive</strong> pull toward its own best
+    \(\mathbf{p}_i\), and a <strong style="color:var(--blue)">social</strong> pull
+    toward the global best \(\hat{\mathbf{g}}\) — and then the position simply follows
+    the velocity:
+  </p>
+
+  <div class="mathblock">
+    $$ \mathbf{v}_i \;\leftarrow\; \underbrace{\textcolor{#f0b72f}{w\,\mathbf{v}_i}}_{\text{inertia}} \;+\; \underbrace{\textcolor{#56d364}{c_1\, r_1 \odot (\mathbf{p}_i - \mathbf{x}_i)}}_{\text{cognitive}} \;+\; \underbrace{\textcolor{#5ec8ff}{c_2\, r_2 \odot (\hat{\mathbf{g}} - \mathbf{x}_i)}}_{\text{social}} $$
+    $$ \mathbf{x}_i \;\leftarrow\; \mathbf{x}_i + \mathbf{v}_i $$
+  </div>
+  <p class="fignote">
+    \(r_1, r_2 \sim U(0,1)^d\) are drawn fresh per coordinate and \(\odot\) is
+    elementwise, so the two pulls jitter independently along each axis. Stable defaults:
+    \(c_1 = c_2 \approx 2\), with \(w\) on a decreasing schedule from \(\sim\!0.9\) down
+    to \(\sim\!0.4\).
+  </p>
+
+  <h3>How the velocity is assembled</h3>
+  <p>
+    Geometrically the update is nothing but vector addition. Lay the three contributions
+    tip-to-tail, and the new velocity is the single arrow that closes the path from the
+    old position to the new one:
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 244" role="img" aria-label="Tip-to-tail sum of the three PSO velocity components.">
+      <!-- baseline reference -->
+      <line x1="36" y1="185" x2="444" y2="185" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="2 5"/>
+      <!-- targets pi and g-hat as faint reference points -->
+      <circle cx="250" cy="58" r="3.5" fill="none" stroke="#56d364" stroke-width="1.4"/>
+      <text x="258" y="54" font-size="11" fill="#56d364">p&#7522; (own best)</text>
+      <circle cx="392" cy="92" r="3.5" fill="none" stroke="#5ec8ff" stroke-width="1.4"/>
+      <text x="400" y="88" font-size="11" fill="#5ec8ff">&#285; (swarm best)</text>
+      <!-- tip-to-tail components -->
+      <line x1="70" y1="185" x2="165" y2="179" stroke="#f0b72f" stroke-width="2.6" marker-end="url(#ah-gold)"/>
+      <line x1="165" y1="179" x2="235" y2="127" stroke="#56d364" stroke-width="2.6" marker-end="url(#ah-green)"/>
+      <line x1="235" y1="127" x2="313" y2="67" stroke="#5ec8ff" stroke-width="2.6" marker-end="url(#ah-blue)"/>
+      <!-- resultant new velocity -->
+      <line x1="70" y1="185" x2="313" y2="67" stroke="#e8eef6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah-white)"/>
+      <!-- endpoints -->
+      <circle cx="70" cy="185" r="4.5" fill="#5ec8ff"/>
+      <circle cx="313" cy="67" r="4.5" fill="#ffffff"/>
+      <!-- labels -->
+      <text x="64" y="201" font-size="11.5" fill="#5ec8ff" text-anchor="end">x&#7522;</text>
+      <text x="322" y="64" font-size="11.5" fill="#ffffff">x&#7522; + v&#7522;</text>
+      <text x="118" y="201" font-size="11" fill="#f0b72f" text-anchor="middle">w v&#7522;</text>
+      <text x="178" y="177" font-size="11" fill="#56d364" text-anchor="start">c&#8321;r&#8321;(p&#7522;&#8722;x&#7522;)</text>
+      <text x="280" y="108" font-size="11" fill="#5ec8ff" text-anchor="start">c&#8322;r&#8322;(&#285;&#8722;x&#7522;)</text>
+      <text x="205" y="110" font-size="11" fill="#e8eef6" text-anchor="middle">new v&#7522;</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 1</b> — the new velocity \(\mathbf{v}_i\) is the tip-to-tail sum of carried
+    momentum (gold), the pull toward the particle's own best \(\mathbf{p}_i\) (green),
+    and the pull toward the swarm best \(\hat{\mathbf{g}}\) (blue). Their resultant
+    carries the particle from \(\mathbf{x}_i\) to \(\mathbf{x}_i + \mathbf{v}_i\). The
+    random weights \(r_1, r_2\) rescale the two coloured pulls every step.
+  </p>
+
+  <h3>What each knob does</h3>
+  <p>
+    The dial that sets exploration against exploitation is the inertia \(w\). High \(w\)
+    keeps velocities large and the swarm roams; low \(w\) lets the two pulls win and the
+    swarm collapses onto \(\hat{\mathbf{g}}\). Making \(c_2\) large relative to \(c_1\)
+    turns every particle into a follower of the global best — fast to converge, but prone
+    to <em>premature convergence</em>: the swarm agrees before it has explored.
   </p>
 
   <div class="demo" data-demo="pso"></div>
-
-  <div class="callout good">
-    <strong>Try this.</strong> Set <code>inertia w</code> high (≈1.1) on Rastrigin —
-    the swarm refuses to settle and keeps exploring the ripples. Now drop it to 0.3:
-    it snaps into the nearest basin. Push <code>social c₂</code> to 3 and
-    <code>cognitive c₁</code> to 0 — every particle dives at the global best and
-    diversity dies. The sweet spot is a balance, classically <code>c₁ = c₂ ≈ 2</code>
-    with the constriction factor (here ~1.5 each with clamping).
-  </div>
-
-  <h3>Why it works — and where it breaks</h3>
-  <p>
-    PSO is almost embarrassingly simple to implement, has few parameters, and is
-    strong on multimodal landscapes because the swarm holds many positions at once.
-    Its failure mode is <strong>premature convergence</strong>: once <code>g</code>
-    stops improving, the social pull drags everyone in, the difference terms
-    <code>(p − x)</code> and <code>(g − x)</code> shrink to zero, and the swarm
-    freezes — even if the true optimum is elsewhere. The fixes used in the library:
-    a <strong>ring topology</strong> (particles follow a local neighbour's best, not
-    the global one, so good news spreads slowly and diversity survives), and
-    <strong>turbulent re-initialization</strong> of the worst particles after a
-    stagnation window.
+  <p class="caption">
+    <b>live</b> — the two bold arrows are drawn on one highlighted particle so you can
+    watch its velocity being assembled; the faint blue arrows are the velocity field
+    \(\mathbf{v}_i\) of the whole swarm. The side panel tracks the swarm spread, which
+    collapses as the social term takes over.
   </p>
 
-  <pre><span class="c"># the entire update, vectorized over the swarm (metaheuristics/pso.py)</span>
-v = <span class="f">w</span> * v \
-  + <span class="f">c1</span> * r1 * (pbest_x - x) \
-  + <span class="f">c2</span> * r2 * (gbest_x - x)
-v = np.<span class="f">clip</span>(v, -v_max, v_max)
-x = bounds.<span class="f">clip</span>(x + v)</pre>
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Push <strong>inertia \(w\)</strong> above 1 on Rastrigin: velocities grow and the
+    swarm refuses to settle. Drop it to 0.3 and it collapses into the nearest basin. Zero
+    out <strong>\(c_1\)</strong> and max <strong>\(c_2\)</strong> to watch diversity die
+    as every particle chases \(\hat{\mathbf{g}}\). Use <strong>step</strong> to inspect a
+    single iteration.
+  </div>
 </section>
 
-<!-- ============================ GA ============================ -->
+<!-- ===================== GA ===================== -->
 <section id="ga">
-  <h2><span class="num">02</span> Genetic Algorithms</h2>
-  <p class="lede">Darwin as an optimizer: select, recombine, mutate, repeat.</p>
+  <h2><span class="num">03</span> Genetic Algorithm</h2>
+  <p class="lede">Selection, recombination, mutation, elitism. A real-coded evolutionary loop.</p>
 
+  <h3>The loop</h3>
   <p>
-    A genetic algorithm (Holland, 1975) treats candidate solutions as
-    <strong>individuals</strong> in a population and lets natural selection do the
-    searching. Each generation applies three operators that map directly onto
-    biology:
+    A population of candidate solutions evolves generation by generation. Each new
+    generation is built by three operators, in order — pick promising parents, blend
+    them into children, then perturb the children slightly — while a few of the very
+    best survive untouched (<b>elitism</b>) so progress is never lost.
   </p>
-  <ol>
-    <li><strong>Selection.</strong> Pick parents with a bias toward fitness.
-      <em>Tournament selection</em> grabs <code>k</code> random individuals and keeps
-      the best of them; larger <code>k</code> means harsher selection pressure —
-      faster progress, but a quicker collapse of diversity.</li>
-    <li><strong>Crossover.</strong> Recombine two parents into children, mixing their
-      "genes" (coordinates). The intuition — Holland's <em>building-block
-      hypothesis</em> — is that good partial solutions combine into better whole
-      ones. For real numbers, <em>BLX-α</em> samples each child gene from the
-      interval spanned by the parents, slightly extended so children can step a
-      little beyond either parent.</li>
-    <li><strong>Mutation.</strong> Randomly perturb genes. This is the exploration
-      valve: without it the population converges and can only ever recombine what it
-      already has. We use Gaussian mutation with a step that anneals over time.</li>
-  </ol>
 
+  <div class="pseudo"><span class="lbl">one generation</span><span class="kw">for</span> each offspring slot (after copying the elite):
+  p&#8321;, p&#8322; <span class="op">&#8592;</span> tournament(k), tournament(k)        <span class="cm"># selection</span>
+  child  <span class="op">&#8592;</span> BLX-&#945;(p&#8321;, p&#8322;)                       <span class="cm"># recombination</span>
+  child  <span class="op">&#8592;</span> child + &#119967;(0, &#963;&#178;)  <span class="kw">with prob</span> p_mut   <span class="cm"># mutation</span>
+next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
+
+  <h3>Selection: a tournament</h3>
   <p>
-    <strong>Elitism</strong> copies the few best individuals through untouched, so
-    the best-so-far can never be lost to an unlucky mutation. The three operators
-    split the explore/exploit duty cleanly: <em>crossover exploits</em> by blending
-    good blocks, <em>mutation explores</em> by stepping off the population, and
-    <em>selection</em> supplies the pressure that turns random drift into a directed
-    climb.
+    To pick one parent, draw \(k\) individuals at random and keep the fittest of them.
+    Nothing more. The tournament size \(k\) is the single dial of <em>selection
+    pressure</em>: \(k=1\) is a random pick (no pressure), while large \(k\) almost
+    always returns a top individual (harsh pressure, fast convergence, more risk of
+    collapsing onto a local optimum).
   </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 132" role="img" aria-label="Tournament selection: k individuals are drawn at random and the fittest becomes a parent.">
+      <text x="44" y="20" font-size="10.5" class="muted" text-anchor="start">population &#183; colour = fitness (greener = fitter)</text>
+      <text x="131" y="34" font-size="10.5" fill="#f0b72f" text-anchor="middle">k = 3 drawn at random</text>
+      <!-- population dots -->
+      <circle cx="44"    cy="56" r="7" fill="#6b7891"/>
+      <circle cx="87.5"  cy="56" r="7" fill="#8fb46a"/>
+      <circle cx="131"   cy="56" r="7" fill="#56d364"/>
+      <circle cx="174.5" cy="56" r="7" fill="#8fb46a"/>
+      <circle cx="218"   cy="56" r="7" fill="#8fb46a"/>
+      <circle cx="261.5" cy="56" r="7" fill="#8fb46a"/>
+      <circle cx="305"   cy="56" r="7" fill="#6b7891"/>
+      <circle cx="348.5" cy="56" r="7" fill="#56d364"/>
+      <circle cx="392"   cy="56" r="7" fill="#8fb46a"/>
+      <circle cx="435.5" cy="56" r="7" fill="#56d364"/>
+      <!-- the k sampled get a gold ring -->
+      <circle cx="131"   cy="56" r="11.5" fill="none" stroke="#f0b72f" stroke-width="1.6"/>
+      <circle cx="261.5" cy="56" r="11.5" fill="none" stroke="#f0b72f" stroke-width="1.6"/>
+      <circle cx="392"   cy="56" r="11.5" fill="none" stroke="#f0b72f" stroke-width="1.6"/>
+      <!-- winner arrow -->
+      <line x1="131" y1="69" x2="131" y2="98" class="axis" marker-end="url(#ah-green)"/>
+      <text x="131" y="120" font-size="11" fill="#56d364" text-anchor="middle">fittest &#8594; parent p&#8321;</text>
+      <text x="392" y="120" font-size="10" class="muted" text-anchor="middle">(repeat for p&#8322;)</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 1</b> — three individuals are sampled (gold rings); the greenest wins and
+    becomes a parent. Raising \(k\) samples more each time, so the winner is almost
+    always near-elite — more pressure, less diversity.
+  </p>
+
+  <h3>Recombination: BLX-&#945; crossover</h3>
+  <p>
+    Given two parents, each child coordinate is drawn <em>uniformly</em> from the
+    interval the parents span on that axis, widened by a fraction \(\alpha\) on both
+    sides. The widening is what lets a child fall a little <em>outside</em> the parents,
+    so the population can still reach values neither parent had:
+  </p>
+
+  <div class="mathblock">
+    $$ \text{child}_j \;\sim\; U\big[\, m_j - \alpha d_j,\ \ M_j + \alpha d_j \,\big], \qquad m_j=\min(p_{1j},p_{2j}),\ \ M_j=\max(p_{1j},p_{2j}),\ \ d_j = M_j - m_j $$
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 150" role="img" aria-label="BLX-alpha draws the child uniformly from the parent interval widened by alpha d on each side.">
+      <text x="44" y="22" font-size="10.5" class="muted" text-anchor="start">one coordinate j</text>
+      <!-- widened band -->
+      <rect x="95" y="66" width="300" height="28" rx="3" fill="#5ec8ff" opacity="0.12"/>
+      <!-- core parent interval -->
+      <rect x="170" y="66" width="150" height="28" rx="3" fill="#56d364" opacity="0.20"/>
+      <!-- axis -->
+      <line x1="40" y1="80" x2="448" y2="80" class="axis"/>
+      <!-- boundary ticks -->
+      <line x1="95"  y1="66" x2="95"  y2="94" stroke="#5ec8ff" stroke-width="1.3"/>
+      <line x1="170" y1="62" x2="170" y2="98" stroke="#f0b72f" stroke-width="1.4"/>
+      <line x1="320" y1="62" x2="320" y2="98" stroke="#f0b72f" stroke-width="1.4"/>
+      <line x1="395" y1="66" x2="395" y2="94" stroke="#5ec8ff" stroke-width="1.3"/>
+      <!-- parents -->
+      <circle cx="170" cy="80" r="5" fill="#f0b72f"/>
+      <circle cx="320" cy="80" r="5" fill="#f0b72f"/>
+      <text x="170" y="54" font-size="11.5" fill="#f0b72f" text-anchor="middle">p&#8321;</text>
+      <text x="320" y="54" font-size="11.5" fill="#f0b72f" text-anchor="middle">p&#8322;</text>
+      <!-- child (lands in the left extension: extrapolation) -->
+      <circle cx="128" cy="80" r="5.5" fill="#56d364"/>
+      <text x="128" y="116" font-size="11" fill="#56d364" text-anchor="middle">child</text>
+      <!-- span labels -->
+      <text x="245" y="116" font-size="10.5" class="muted" text-anchor="middle">d = |p&#8321; &#8722; p&#8322;|</text>
+      <text x="132" y="135" font-size="10" fill="#5ec8ff" text-anchor="middle">&#945;d</text>
+      <text x="357" y="135" font-size="10" fill="#5ec8ff" text-anchor="middle">&#945;d</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 2</b> — the green band is the parent interval \([m_j, M_j]\); the blue band
+    extends it by \(\alpha d_j\) on each side. The child is drawn uniformly across the
+    whole blue band, so it can land beyond either parent (here, to the left) — mild
+    extrapolation that keeps the search from shrinking too fast.
+  </p>
+
+  <h3>Mutation &amp; elitism</h3>
+  <p>
+    Finally each child coordinate is, with probability \(p_{\text{mut}}\), nudged by
+    Gaussian noise of scale \(\sigma\). This is the GA's exploration valve: too small and
+    the population stalls, too large and it never settles.
+  </p>
+  <div class="mathblock">
+    $$ \text{child} \;\leftarrow\; \text{child} + \mathcal{N}(0,\sigma^2) \quad\text{per coordinate, with probability } p_{\text{mut}} $$
+  </div>
 
   <div class="demo" data-demo="ga"></div>
-
-  <div class="callout">
-    <strong>Watch the population breathe.</strong> Early on it is spread across the
-    whole landscape (exploration); generation by generation, selection pulls it
-    toward the good basins and it contracts (exploitation). Turn <code>mutation σ</code>
-    to near zero and the population collapses fast but can get stuck; turn it high and
-    it never commits, scattering forever. Raise <code>tournament k</code> to feel
-    selection pressure: high <code>k</code> converges hard, low <code>k</code> keeps
-    weak individuals around as genetic raw material.
-  </div>
-
-  <h3>GA vs. PSO</h3>
-  <p>
-    They are cousins — both population-based — but differ in <em>how information
-    moves</em>. In PSO, particles keep their identity and are <em>attracted</em>
-    toward good points; in a GA, individuals are <em>replaced</em> by recombinations
-    of good ones. GAs shine when the problem has combinatorial structure or
-    deceptive ruggedness where building blocks matter; PSO often converges faster on
-    smooth-ish continuous problems. On a flat multimodal grid like Rastrigin, a GA's
-    crossover-driven diversity frequently finds the global basin where a greedy swarm
-    settles for second best.
+  <p class="caption">
+    <b>live</b> — the cloud is colour-coded by fitness; one mating per generation is
+    highlighted (two gold parents → a green child). The panel's <em>diversity</em>
+    reading is the spread that lets a GA cover several basins at once.
   </p>
+
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Send <strong>mutation \(\sigma\)</strong> toward 0: the population converges quickly,
+    then stalls, losing the diversity it needs to improve. Raise it and it never settles.
+    Increase <strong>tournament \(k\)</strong> to intensify selection pressure (faster
+    convergence, higher risk of a local optimum). On Rastrigin the GA's diversity
+    routinely finds the global basin where a greedier method settles.
+  </div>
 </section>
 
-<!-- ============================ DE ============================ -->
+<!-- ===================== DE ===================== -->
 <section id="de">
-  <h2><span class="num">03</span> Differential Evolution</h2>
-  <p class="lede">Mutate by the difference between two random members. Self-scaling, almost parameter-free.</p>
+  <h2><span class="num">04</span> Differential Evolution</h2>
+  <p class="lede">Mutation by the scaled difference of two random members. Self-scaling, near parameter-free.</p>
 
+  <h3>Mutation: a difference vector</h3>
   <p>
-    Differential Evolution (Storn &amp; Price, 1997) is the connoisseur's default for
-    continuous black-box problems. Its mutation operator is one elegant idea: to
-    perturb a member, add the <strong>scaled difference of two other random
-    members</strong>. For the classic <code>rand/1/bin</code> scheme, target
-    <code>xᵢ</code> gets a donor
+    DE's signature is that its step size is not a parameter at all — it is read off the
+    population itself. To mutate, pick three other members at random and add a
+    \(F\)-scaled copy of the difference between two of them to the third:
   </p>
-  <div class="formula">
-    v = x<sub>a</sub> + <span class="hl-i">F</span> · (x<sub>b</sub> − x<sub>c</sub>)
-    <div class="small">a, b, c distinct random members · F ≈ 0.5–0.9</div>
+
+  <div class="mathblock">
+    $$ \mathbf{v} \;=\; \mathbf{x}_a \;+\; \textcolor{#f0b72f}{F}\,\textcolor{#d2a8ff}{(\mathbf{x}_b - \mathbf{x}_c)} $$
   </div>
-  <p>
-    then <em>binomial crossover</em> mixes donor and target coordinate-by-coordinate
-    (each from the donor with probability <code>CR</code>, at least one guaranteed),
-    and the trial replaces the target only if it scores at least as well —
-    <strong>greedy selection</strong>.
+
+  <div class="fig">
+    <svg viewBox="0 0 460 210" role="img" aria-label="The donor is the base point plus F times the difference of two other random members.">
+      <!-- full (unscaled) difference, translated onto the base, faint -->
+      <line x1="250" y1="165" x2="340" y2="95" stroke="#d2a8ff" stroke-width="1.2" stroke-dasharray="3 4" opacity="0.45"/>
+      <!-- difference vector x_b - x_c -->
+      <line x1="90" y1="150" x2="180" y2="80" stroke="#d2a8ff" stroke-width="2.4" marker-end="url(#ah-purple)"/>
+      <!-- scaled difference added to base -> donor -->
+      <line x1="250" y1="165" x2="313" y2="116" stroke="#56d364" stroke-width="2.6" marker-end="url(#ah-green)"/>
+      <!-- points -->
+      <circle cx="90"  cy="150" r="5" fill="#d2a8ff"/>
+      <circle cx="180" cy="80"  r="5" fill="#d2a8ff"/>
+      <circle cx="250" cy="165" r="5.5" fill="#f0b72f"/>
+      <circle cx="313" cy="116" r="6" fill="#56d364"/>
+      <!-- labels -->
+      <text x="84"  y="156" font-size="11.5" fill="#d2a8ff" text-anchor="end">x_c</text>
+      <text x="186" y="74"  font-size="11.5" fill="#d2a8ff" text-anchor="start">x_b</text>
+      <text x="250" y="186" font-size="11.5" fill="#f0b72f" text-anchor="middle">x_a (base)</text>
+      <text x="322" y="112" font-size="11.5" fill="#56d364" text-anchor="start">donor v</text>
+      <text x="74"  y="108" font-size="10.5" fill="#d2a8ff" text-anchor="end">x_b &#8722; x_c</text>
+      <text x="300" y="156" font-size="10.5" fill="#56d364" text-anchor="start">F&#183;(x_b&#8722;x_c)</text>
+      <text x="350" y="92"  font-size="9.5"  class="muted" text-anchor="start">full difference</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 1</b> — the donor \(\mathbf{v}\) is the base point \(\mathbf{x}_a\) plus the
+    difference \(\mathbf{x}_b - \mathbf{x}_c\) scaled by \(F\). Because that difference is
+    large when the population is spread out and small once it has clustered, the step
+    <em>self-scales</em>: big exploratory moves early, fine refinement late, with no
+    schedule to tune.
   </p>
 
+  <h3>Crossover: binomial mixing</h3>
   <p>
-    The beautiful part is <strong>self-scaling</strong>. Early on the population is
-    spread out, so a difference vector <code>x_b − x_c</code> is large and DE takes
-    big exploratory leaps. As the population converges around the optimum, those
-    differences shrink automatically, and the steps become fine local refinements —
-    <em>no step-size schedule required</em>. The search adapts its own scale to the
-    landscape for free.
+    The donor does not replace the target wholesale. Coordinate by coordinate, a
+    <em>trial</em> vector \(\mathbf{u}\) takes the donor's value with probability \(CR\)
+    and otherwise keeps the target's. One coordinate \(j_{\text{rand}}\) is forced to come
+    from the donor, so the trial always differs from the target in at least one place:
   </p>
+
+  <div class="mathblock">
+    $$ u_j \;=\; \begin{cases} \textcolor{#56d364}{v_j} & \text{if } \text{rand}_j \le CR \ \text{ or }\ j = j_{\text{rand}} \\[2pt] x_{ij} & \text{otherwise} \end{cases} $$
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 470 168" role="img" aria-label="Binomial crossover builds the trial coordinate by coordinate from the donor or the target.">
+      <!-- per-column faint guides -->
+      <g class="grid">
+        <line x1="98"  y1="40" x2="98"  y2="134"/>
+        <line x1="144" y1="40" x2="144" y2="134"/>
+        <line x1="190" y1="40" x2="190" y2="134"/>
+        <line x1="236" y1="40" x2="236" y2="134"/>
+        <line x1="282" y1="40" x2="282" y2="134"/>
+        <line x1="328" y1="40" x2="328" y2="134"/>
+        <line x1="374" y1="40" x2="374" y2="134"/>
+      </g>
+      <!-- row labels -->
+      <text x="70" y="57"  font-size="10.5" fill="#9fe0a8" text-anchor="end">donor v</text>
+      <text x="70" y="95"  font-size="10.5" class="muted" text-anchor="end">target x&#7522;</text>
+      <text x="70" y="133" font-size="10.5" fill="#e8eef6" text-anchor="end">trial u</text>
+      <!-- header decisions: col centres 78,124,...,354 -> shifted to guide x -->
+      <g font-size="11" class="plain">
+        <text x="98"  y="32" fill="#56d364" text-anchor="middle">&#10003;</text>
+        <text x="144" y="32" fill="#6b7891" text-anchor="middle">&#10007;</text>
+        <text x="190" y="32" fill="#56d364" text-anchor="middle">&#10003;</text>
+        <text x="236" y="32" fill="#56d364" text-anchor="middle">&#10003;</text>
+        <text x="282" y="32" fill="#f0b72f" text-anchor="middle">&#9733;</text>
+        <text x="328" y="32" fill="#56d364" text-anchor="middle">&#10003;</text>
+        <text x="374" y="32" fill="#6b7891" text-anchor="middle">&#10007;</text>
+      </g>
+      <!-- cells: 7 columns, donor row y=44, target y=82, trial y=120 -->
+      <!-- donor row (green tint) -->
+      <g>
+        <rect x="78"  y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="124" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="170" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="216" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="262" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="308" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+        <rect x="354" y="44" width="40" height="24" rx="3" fill="#56d364" opacity="0.16"/>
+      </g>
+      <!-- target row (slate) -->
+      <g>
+        <rect x="78"  y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="124" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="170" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="216" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="262" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="308" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="354" y="82" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+      </g>
+      <!-- trial row: coloured by chosen source (green=donor, slate=target) -->
+      <g>
+        <rect x="78"  y="120" width="40" height="24" rx="3" fill="#56d364" opacity="0.30"/>
+        <rect x="124" y="120" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+        <rect x="170" y="120" width="40" height="24" rx="3" fill="#56d364" opacity="0.30"/>
+        <rect x="216" y="120" width="40" height="24" rx="3" fill="#56d364" opacity="0.30"/>
+        <rect x="262" y="120" width="40" height="24" rx="3" fill="#56d364" opacity="0.30"/>
+        <rect x="262" y="120" width="40" height="24" rx="3" fill="none" stroke="#f0b72f" stroke-width="1.5"/>
+        <rect x="308" y="120" width="40" height="24" rx="3" fill="#56d364" opacity="0.30"/>
+        <rect x="354" y="120" width="40" height="24" rx="3" fill="#1a2333" stroke="#263041"/>
+      </g>
+      <!-- column indices -->
+      <g font-size="9" class="muted plain">
+        <text x="98"  y="160" text-anchor="middle">1</text>
+        <text x="144" y="160" text-anchor="middle">2</text>
+        <text x="190" y="160" text-anchor="middle">3</text>
+        <text x="236" y="160" text-anchor="middle">4</text>
+        <text x="282" y="160" text-anchor="middle">5</text>
+        <text x="328" y="160" text-anchor="middle">6</text>
+        <text x="374" y="160" text-anchor="middle">j</text>
+      </g>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 2</b> — per coordinate: \(\checkmark\) means \(\text{rand}\le CR\) so the
+    trial copies the <span style="color:var(--green)">donor</span>; \(\times\) means it
+    keeps the <span style="color:var(--fg-dim)">target</span>. The gold \(\star\) is the
+    forced coordinate \(j_{\text{rand}}\). High \(CR\) takes mostly donor (good when
+    coordinates are separable); low \(CR\) stays close to the target (good when they are
+    coupled).
+  </p>
+
+  <h3>Selection: greedy and elitist</h3>
+  <p>
+    The trial is evaluated once and replaces the target only if it is no worse. Nothing
+    ever regresses, so the population's best is monotone:
+  </p>
+  <div class="mathblock">
+    $$ \mathbf{x}_i \;\leftarrow\; \mathbf{u} \quad\text{if}\quad f(\mathbf{u}) \le f(\mathbf{x}_i) $$
+  </div>
 
   <div class="demo" data-demo="de"></div>
+  <p class="caption">
+    <b>live</b> — the donor construction is drawn on one target each step: the purple
+    difference vector and the green donor. The panel's <em>mean \(|\mathbf{x}_b -
+    \mathbf{x}_c|\)</em> is the step size, and you can watch it decay on its own as the
+    cloud contracts.
+  </p>
 
-  <div class="callout good">
-    <strong>Feel the self-scaling.</strong> Watch the candidate cloud: it starts
-    coarse and automatically tightens as members agree. <code>F</code> sets step
-    aggressiveness (too low → premature convergence; too high → never settles);
-    <code>CR</code> controls how much of the donor enters each trial — high
-    <code>CR</code> suits separable functions, low <code>CR</code> suits ones with
-    tangled coordinates. On Rosenbrock's curved valley DE is excellent, second only
-    to CMA-ES below.
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Switch to <strong>Rosenbrock</strong>: DE threads the ill-conditioned valley well,
+    because its difference vectors line up with the population's local geometry.
+    <strong>\(F\)</strong> sets step aggressiveness; <strong>\(CR\)</strong> the mixing
+    rate (high \(CR\) suits separable problems, low \(CR\) suits coupled coordinates).
   </div>
 </section>
 
-<!-- ============================ SA ============================ -->
+<!-- ===================== SA ===================== -->
 <section id="sa">
-  <h2><span class="num">04</span> Simulated Annealing</h2>
-  <p class="lede">One walker, cooling from chaos into order — and willing to climb uphill to escape a trap.</p>
+  <h2><span class="num">05</span> Simulated Annealing</h2>
+  <p class="lede">A single Markov chain with a temperature-controlled Metropolis acceptance.</p>
+
+  <h3>The Metropolis rule</h3>
+  <p>
+    One walker proposes a random neighbour each step. If the move improves the objective
+    (\(\Delta E \le 0\)) it is always taken. A <em>worsening</em> move is not rejected
+    outright — it is accepted with a probability that shrinks with how much worse it is,
+    and grows with the temperature \(T\):
+  </p>
+
+  <div class="mathblock">
+    $$ P(\text{accept}) = \begin{cases} 1 & \Delta E \le 0 \\[2pt] \textcolor{#5ec8ff}{\exp(-\Delta E / T)} & \Delta E > 0 \end{cases}, \qquad \Delta E = f(x_{\text{new}}) - f(x_{\text{cur}}) $$
+  </div>
 
   <p>
-    Simulated Annealing (Kirkpatrick et al., 1983) borrows from metallurgy: heat a
-    metal and its atoms jiggle freely; cool it slowly and they settle into a
-    low-energy crystal. SA is a single point taking random steps, with one crucial
-    twist — it sometimes accepts a <em>worse</em> move. A proposal that
-    <strong>improves</strong> is always taken; a proposal that <strong>worsens</strong>
-    by <code>Δ</code> is accepted with probability
+    That single exponential is the whole reason annealing can escape a local minimum:
+    while hot, it routinely walks uphill out of a basin; once cold, it almost never does.
+    The shape of the curve is everything:
   </p>
-  <div class="formula">
-    P(accept) = exp(−Δ / <span class="hl-i">T</span>)
-    <div class="small">T = temperature, lowered on a cooling schedule</div>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 212" role="img" aria-label="Acceptance probability versus the worsening of a move, at three temperatures.">
+      <!-- gridline at P=0.5 -->
+      <line x1="60" y1="100" x2="440" y2="100" class="grid"/>
+      <!-- axes -->
+      <line x1="60" y1="24" x2="60" y2="170" class="axis"/>
+      <line x1="30" y1="170" x2="448" y2="170" class="axis" marker-end="url(#ah-dim)"/>
+      <!-- always-accept shelf for dE<=0 -->
+      <line x1="30" y1="30" x2="60" y2="30" stroke="#56d364" stroke-width="2.4"/>
+      <line x1="60" y1="24" x2="60" y2="30" stroke="#56d364" stroke-width="1" stroke-dasharray="2 2"/>
+      <!-- curves -->
+      <polyline fill="none" stroke="#5ec8ff" stroke-width="2.4" points="60,30 107.5,49.5 155,66.3 202.5,80.7 250,93.1 297.5,103.9 345,113 392.5,121 440,127.9"/>
+      <polyline fill="none" stroke="#f0b72f" stroke-width="2.4" points="60,30 107.5,73.8 155,103.9 202.5,124.5 250,138.8 297.5,148.5 345,155.3 392.5,159.9 440,163"/>
+      <polyline fill="none" stroke="#ff7b72" stroke-width="2.4" points="60,30 107.5,118.5 155,151.1 202.5,163 250,167.4 297.5,168.9 345,169.6 392.5,169.9 440,170"/>
+      <!-- y ticks -->
+      <text x="52" y="34"  font-size="9.5" class="muted" text-anchor="end">1</text>
+      <text x="52" y="104" font-size="9.5" class="muted" text-anchor="end">0.5</text>
+      <text x="52" y="173" font-size="9.5" class="muted" text-anchor="end">0</text>
+      <text x="30" y="18"  font-size="10" fill="#a3b0c2" text-anchor="start">P(accept)</text>
+      <!-- x labels -->
+      <text x="44"  y="186" font-size="9.5" fill="#56d364" text-anchor="middle">&#916;E&#8804;0</text>
+      <text x="250" y="200" font-size="10" class="muted" text-anchor="middle">worsening of the move &#160; &#916;E &gt; 0 &#160;&#8594;</text>
+      <!-- curve labels -->
+      <text x="372" y="100" font-size="10.5" fill="#5ec8ff" text-anchor="start">hot T</text>
+      <text x="346" y="140" font-size="10.5" fill="#f0b72f" text-anchor="start">warm T</text>
+      <text x="178" y="140" font-size="10.5" fill="#ff7b72" text-anchor="start">cold T</text>
+    </svg>
   </div>
+  <p class="caption">
+    <b>fig.</b> — acceptance probability for a worsening move. Improving moves
+    (\(\Delta E \le 0\), green shelf) are always taken. For uphill moves, a
+    <span style="color:var(--blue)">hot</span> chain still says yes fairly often; a
+    <span style="color:var(--red)">cold</span> one almost always says no. Cooling is just
+    sliding from the top curve down to the bottom one over the run.
+  </p>
+
+  <h3>Cooling</h3>
   <p>
-    At high <strong>temperature</strong> almost any move is accepted — the walker
-    roams freely and hops out of local minima. As <code>T</code> cools toward zero,
-    uphill moves become rare and finally forbidden, so the walker settles into
-    whatever basin it is in. The <strong>cooling schedule</strong> is everything:
-    cool too fast and you <em>quench</em> into a bad local minimum; cool too slow and
-    you waste your whole budget. Geometric cooling <code>T ← α·T</code> with
-    <code>α</code> near 1 is the standard compromise.
+    The temperature is lowered geometrically, so the chain explores freely early and
+    commits late. This schedule is the one knob that really matters:
+  </p>
+  <div class="mathblock">
+    $$ T \;\leftarrow\; \alpha\, T, \qquad 0 \ll \alpha < 1 $$
+  </div>
+  <p class="fignote">
+    Too fast (small \(\alpha\)) and the chain <em>quenches</em> into the first basin it
+    finds; too slow and it wastes the evaluation budget wandering. Annealing buys the
+    escape-local-minima property at the price of a single point — no population to carry.
   </p>
 
   <div class="demo" data-demo="sa"></div>
+  <p class="caption">
+    <b>live</b> — the panel shows \(\Delta E\) and \(P(\text{accept})\) each step. The
+    yellow trail is the chain; red flickers are rejected proposals. Early on, while hot,
+    you will catch it accepting clearly uphill moves.
+  </p>
 
-  <div class="callout warn">
-    <strong>The accept-worse magic.</strong> The yellow trail is the walker; red
-    segments are <em>rejected</em> proposals. Early (hot) you'll see it accept moves
-    that go uphill — that's how it escapes the cosine ripples of Rastrigin. With a
-    fast cooling <code>α = 0.90</code> it freezes early, often in a nearby local
-    minimum; with <code>α = 0.999</code> it explores far longer before committing.
-    SA is the cheapest way to get the "escape local minima" behaviour — one point,
-    one evaluation per step, no population to maintain.
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Set <strong>cooling \(\alpha\)</strong> to a fast 0.90: the chain freezes early, often
+    in a local minimum. Push it to 0.999 and it explores far longer before committing.
+    Watch the live \(P(\text{accept})\) collapse toward 0 as \(T\) falls.
   </div>
 </section>
 
-<!-- ============================ CMA-ES ============================ -->
+<!-- ===================== CMA-ES ===================== -->
 <section id="cmaes">
-  <h2><span class="num">05</span> CMA-ES</h2>
-  <p class="lede">Don't move points — move a <em>distribution</em>, and learn the shape of the valley.</p>
+  <h2><span class="num">06</span> CMA-ES</h2>
+  <p class="lede">Adapt a sampling distribution, not a set of points. The strongest method on smooth problems.</p>
+
+  <h3>Sample, rank, re-fit</h3>
+  <p>
+    Instead of tracking individual points, CMA-ES tracks a <em>distribution</em>: a
+    multivariate Gaussian \(\mathcal{N}(\mathbf{m}, \sigma^2 \mathbf{C})\) over the search
+    space. Each generation it draws \(\lambda\) candidates from that Gaussian, ranks them
+    by objective value, and slides the mean toward a weighted average of the best
+    \(\mu\):
+  </p>
+
+  <div class="mathblock">
+    $$ \mathbf{x}_k = \mathbf{m} + \sigma\,\mathcal{N}(\mathbf{0}, \mathbf{C}), \quad k = 1,\dots,\lambda $$
+    $$ \mathbf{m} \;\leftarrow\; \sum_{k=1}^{\mu} w_k\, \mathbf{x}_{k:\lambda} \qquad (w_1 > w_2 > \dots > w_\mu > 0,\ \ \textstyle\sum_k w_k = 1) $$
+  </div>
+  <p class="fignote">
+    \(\mathbf{x}_{k:\lambda}\) is the \(k\)-th best candidate of the generation. Only the
+    <em>ranking</em> matters, never the raw values — which is what makes CMA-ES invariant
+    to any monotone rescaling of \(f\).
+  </p>
+
+  <h3>Learning the landscape's metric</h3>
+  <p>
+    The real power is in the covariance \(\mathbf{C}\). Each generation it is bent toward
+    the directions that just produced improvement. On a curved, ill-conditioned valley
+    the sampling ellipse stops being a round blob and becomes a long, thin, rotated shape
+    aligned with the valley floor — the algorithm has effectively learned the local
+    second-order metric, gradient-free:
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 224" role="img" aria-label="Over generations the CMA-ES sampling ellipse elongates and rotates to align with a curved valley.">
+      <text x="40" y="22" font-size="10.5" class="muted" text-anchor="start">sampling ellipse = a level set of &#119967;(m, &#963;&#178;C)</text>
+      <!-- curved valley contours -->
+      <path d="M64,190 C170,178 250,150 440,78"  fill="none" class="grid"/>
+      <path d="M58,160 C175,146 262,114 444,52"  fill="none" class="grid"/>
+      <path d="M86,212 C196,204 286,182 452,108" fill="none" class="grid"/>
+      <!-- optimum -->
+      <circle cx="430" cy="66" r="8" fill="none" stroke="#ffffff" stroke-width="1.4"/>
+      <line x1="430" y1="55" x2="430" y2="61" stroke="#fff" stroke-width="1.2"/>
+      <line x1="430" y1="71" x2="430" y2="77" stroke="#fff" stroke-width="1.2"/>
+      <line x1="419" y1="66" x2="425" y2="66" stroke="#fff" stroke-width="1.2"/>
+      <line x1="435" y1="66" x2="441" y2="66" stroke="#fff" stroke-width="1.2"/>
+      <text x="430" y="96" font-size="10" fill="#fff" text-anchor="middle">x&#9733;</text>
+      <!-- gen 1: near isotropic -->
+      <ellipse cx="120" cy="168" rx="15" ry="12" fill="#5ec8ff" opacity="0.10" stroke="#5ec8ff" stroke-width="1.6" transform="rotate(-20 120 168)"/>
+      <circle cx="120" cy="168" r="2.6" fill="#5ec8ff"/>
+      <text x="120" y="200" font-size="10.5" fill="#5ec8ff" text-anchor="middle">gen 1</text>
+      <!-- gen 5: elongating -->
+      <ellipse cx="232" cy="126" rx="32" ry="12" fill="#f0b72f" opacity="0.10" stroke="#f0b72f" stroke-width="1.6" transform="rotate(-32 232 126)"/>
+      <circle cx="232" cy="126" r="2.6" fill="#f0b72f"/>
+      <text x="232" y="98" font-size="10.5" fill="#f0b72f" text-anchor="middle">gen 5</text>
+      <!-- gen 12: long, thin, aligned -->
+      <ellipse cx="336" cy="92" rx="50" ry="9" fill="#56d364" opacity="0.10" stroke="#56d364" stroke-width="1.6" transform="rotate(-37 336 92)"/>
+      <circle cx="336" cy="92" r="2.6" fill="#56d364"/>
+      <text x="300" y="150" font-size="10.5" fill="#56d364" text-anchor="middle">gen 12</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig.</b> — the same Gaussian over three generations on a curved valley. It begins
+    round (<span style="color:var(--blue)">gen 1</span>), elongates and rotates as the
+    covariance picks up the productive direction (<span style="color:var(--gold)">gen
+    5</span>), and ends as a long thin ellipse tracking the valley toward the optimum
+    (<span style="color:var(--green)">gen 12</span>).
+  </p>
 
   <p>
-    The Covariance Matrix Adaptation Evolution Strategy (Hansen &amp; Ostermeier,
-    2001) is the heavyweight of continuous black-box optimization, and it works at a
-    different level of abstraction than everything above. Instead of pushing
-    individual candidates around, it maintains a <strong>multivariate Gaussian</strong>
-    distribution <code>N(m, σ²C)</code> over the search space and updates that
-    distribution each generation:
+    Concretely, \(\mathbf{C}\) is a blend of its old self, a <strong style="color:var(--green)">rank-one</strong>
+    term that reinforces the path the mean has been travelling, and a
+    <strong style="color:var(--blue)">rank-\(\mu\)</strong> term built from this
+    generation's best steps; the overall scale \(\sigma\) is adapted separately:
   </p>
-  <ol>
-    <li><strong>Sample</strong> λ candidates from the current Gaussian.</li>
-    <li><strong>Rank</strong> them and keep the best μ.</li>
-    <li><strong>Recombine</strong> — the new mean <code>m</code> is their weighted average.</li>
-    <li><strong>Adapt</strong> the covariance <code>C</code> and step size <code>σ</code>
-      so the Gaussian stretches along the directions that have been producing
-      improvements, and shrinks along the rest.</li>
-  </ol>
-
-  <p>
-    That covariance adaptation is the magic. On an ill-conditioned, curved valley
-    like Rosenbrock — where the productive direction is a thin diagonal ridge —
-    CMA-ES <em>learns the ridge's orientation and scale</em> and reshapes its sampling
-    ellipse to align with it. It effectively recovers second-order (Newton-like)
-    information about the landscape <strong>without ever computing a gradient</strong>.
-    Two evolution paths (the cumulative step directions) decouple the control of the
-    overall step size from the shape, which is what makes it so stable.
-  </p>
+  <div class="mathblock">
+    $$ \mathbf{C} \;\leftarrow\; (1-c_1-c_\mu)\,\mathbf{C} \;+\; c_1\,\underbrace{\textcolor{#56d364}{\mathbf{p}_c\,\mathbf{p}_c^{\top}}}_{\text{rank-one}} \;+\; c_\mu \underbrace{\textcolor{#5ec8ff}{\textstyle\sum_k w_k\, \mathbf{y}_k\mathbf{y}_k^{\top}}}_{\text{rank-}\mu} $$
+    $$ \sigma \;\leftarrow\; \sigma\,\exp\!\Big(\tfrac{c_\sigma}{d_\sigma}\Big(\tfrac{\lVert \mathbf{p}_\sigma\rVert}{\mathbb{E}\lVert\mathcal{N}(0,\mathbf{I})\rVert} - 1\Big)\Big) $$
+  </div>
 
   <div class="callout">
-    <strong>The trade-off.</strong> The covariance update is <code>O(d²)</code> per
-    step (an eigendecomposition of a <code>d×d</code> matrix), so CMA-ES is the tool
-    for <em>low-to-medium dimension</em> (roughly <code>d ≤ 100</code>) where sample
-    efficiency matters more than per-step cost. In the benchmark suite it crushes
-    smooth/ill-conditioned problems — Rosenbrock to <code>10⁻²³</code>, far past
-    anything else — but a regular multimodal grid like Rastrigin can still trap its
-    single adapting cloud, where a diverse population wins. No demo here (a drifting,
-    reshaping ellipse in 2-D undersells it), but the full implementation is in
-    <code>metaheuristics/cma_es.py</code>, ~90 readable lines.
+    <span class="h">Cost and regime</span>
+    The covariance update and its eigendecomposition are \(O(d^2)\)–\(O(d^3)\), so CMA-ES
+    targets low-to-moderate dimension (\(d \lesssim 100\)) where sample efficiency
+    dominates per-step cost. On smooth, ill-conditioned objectives it is dominant — in
+    our benchmarks it drove Rosenbrock to \(\sim\!10^{-23}\), far past every population
+    method — while on highly multimodal landscapes a single adapting distribution can
+    still be trapped. The full standard \((\mu/\mu_w, \lambda)\) algorithm is about 90
+    lines in <code>metaheuristics/cma_es.py</code>.
   </div>
-
-  <pre><span class="c"># the conceptual core (see cma_es.py for the full standard algorithm)</span>
-X = mean + sigma * (B @ (D * z))   <span class="c"># sample ~ N(mean, sigma^2 C)</span>
-order = argsort(fitness(X))         <span class="c"># rank candidates</span>
-mean  = mean + sigma * (weights @ y[order[:mu]])   <span class="c"># recombine</span>
-C     = (1-c1-cmu)*C + c1*rank_one + cmu*rank_mu   <span class="c"># learn the shape</span>
-sigma = sigma * exp(...)            <span class="c"># adapt the step size</span></pre>
 </section>
 
-<!-- ============================ BAYESIAN ============================ -->
+<!-- ===================== BAYESIAN ===================== -->
 <section id="bayes">
-  <h2><span class="num">06</span> Bayesian Optimization</h2>
-  <p class="lede">When every evaluation is precious, spend compute to <em>think</em> instead of to sample.</p>
+  <h2><span class="num">07</span> Bayesian Optimization</h2>
+  <p class="lede">A probabilistic surrogate plus an acquisition function. For when evaluations are the bottleneck.</p>
+
+  <h3>The surrogate loop</h3>
+  <p>
+    When a single evaluation is genuinely expensive — a simulation, a training run, a lab
+    experiment — you can afford only tens of them. Bayesian optimization spends that tiny
+    budget wisely by never guessing blindly: it fits a cheap probabilistic <em>model</em>
+    of the objective and lets the model decide where the one next evaluation should go.
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 196" role="img" aria-label="The Bayesian optimization loop: fit a surrogate, maximize the acquisition, evaluate, add the point, repeat.">
+      <!-- boxes -->
+      <rect x="46"  y="40" width="168" height="48" rx="10" fill="#131c2c" stroke="#37425a"/>
+      <rect x="266" y="40" width="168" height="48" rx="10" fill="#131c2c" stroke="#37425a"/>
+      <rect x="266" y="120" width="168" height="48" rx="10" fill="#131c2c" stroke="#37425a"/>
+      <rect x="46"  y="120" width="168" height="48" rx="10" fill="#131c2c" stroke="#37425a"/>
+      <text x="130" y="60" font-size="11" fill="#5ec8ff" text-anchor="middle">fit GP posterior</text>
+      <text x="130" y="76" font-size="10" class="muted" text-anchor="middle">&#956;(x), &#963;(x)</text>
+      <text x="350" y="60" font-size="11" fill="#56d364" text-anchor="middle">maximize EI(x)</text>
+      <text x="350" y="76" font-size="10" class="muted" text-anchor="middle">pick next x*</text>
+      <text x="350" y="140" font-size="11" fill="#f0b72f" text-anchor="middle">evaluate f(x*)</text>
+      <text x="350" y="156" font-size="10" class="muted" text-anchor="middle">the expensive step</text>
+      <text x="130" y="140" font-size="11" fill="#e8eef6" text-anchor="middle">add (x*, y)</text>
+      <text x="130" y="156" font-size="10" class="muted" text-anchor="middle">to the dataset</text>
+      <!-- cycle arrows -->
+      <line x1="214" y1="58" x2="262" y2="58"  class="axis" marker-end="url(#ah-dim)"/>
+      <line x1="350" y1="88" x2="350" y2="116" class="axis" marker-end="url(#ah-dim)"/>
+      <line x1="266" y1="144" x2="218" y2="144" class="axis" marker-end="url(#ah-dim)"/>
+      <line x1="130" y1="120" x2="130" y2="92"  class="axis" marker-end="url(#ah-dim)"/>
+      <text x="240" y="106" font-size="9.5" class="muted" text-anchor="middle">repeat until</text>
+      <text x="240" y="118" font-size="9.5" class="muted" text-anchor="middle">budget spent</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 1</b> — the loop. Everything except the gold box is cheap arithmetic; the
+    whole point is to think hard (model + acquisition) so that the one expensive call
+    lands where it is most useful.
+  </p>
+
+  <h3>The Gaussian-process posterior</h3>
+  <p>
+    Condition a Gaussian process on the observations \((\mathbf{X}, \mathbf{y})\). With
+    kernel \(k\) and noise \(\sigma_n^2\), the posterior at any new point \(x\) is itself
+    Gaussian, with a closed-form mean and variance that share one Gram-matrix inverse:
+  </p>
+
+  <div class="mathblock">
+    $$ \mu(x) = \textcolor{#56d364}{\mathbf{k}(x)^{\top}(\mathbf{K}+\sigma_n^2\mathbf{I})^{-1}\mathbf{y}} $$
+    $$ \sigma^2(x) = k(x,x) - \textcolor{#5ec8ff}{\mathbf{k}(x)^{\top}(\mathbf{K}+\sigma_n^2\mathbf{I})^{-1}\mathbf{k}(x)} $$
+  </div>
+  <p class="fignote">
+    \(\mathbf{k}(x)_i = k(x, x_i)\). At an observation, \(\mu\) is pinned to the data and
+    \(\sigma\) collapses to \(\sim\!0\); far from any data, \(\sigma\) swells — and that
+    swelling is exactly what the acquisition will chase.
+  </p>
 
   <p>
-    Everything so far burns through thousands of evaluations. But what if a single
-    <code>f(x)</code> costs an hour of simulation, a day of GPU training, or a real
-    physical experiment? Then you can afford only a few dozen, and you must choose
-    each one wisely. Bayesian optimization is the answer, and it works by building a
-    cheap <strong>model of the expensive function</strong>:
+    The kernel encodes the smoothness prior. The common RBF choice makes nearby inputs
+    strongly correlated, with a <em>length scale</em> \(\ell\) that sets how fast that
+    correlation falls off — i.e. how wiggly the GP believes \(f\) is:
   </p>
-  <ol>
-    <li><strong>Surrogate.</strong> Fit a <em>Gaussian Process</em> to the points seen
-      so far. A GP returns, for <em>any</em> input, both a predicted mean
-      <code>μ(x)</code> and an honest <em>uncertainty</em> <code>σ(x)</code> — wide
-      where you have no data, tight where you've measured.</li>
-    <li><strong>Acquisition.</strong> Use that uncertainty to decide where to look
-      next. <em>Expected Improvement</em> scores each candidate by how much it might
-      beat the current best, integrating over the GP's uncertainty:
-      <div class="formula" style="margin:12px 0">
-        EI(x) = (f<sub>best</sub> − μ(x))·Φ(z) + σ(x)·φ(z),&nbsp;&nbsp; z = (f<sub>best</sub> − μ(x)) / σ(x)
-      </div>
-      The first term rewards a <em>low predicted mean</em> (exploitation); the second
-      rewards <em>high uncertainty</em> (exploration). EI automatically balances them.</li>
-    <li><strong>Evaluate</strong> the true <code>f</code> at the EI maximizer, add the
-      point, refit, repeat.</li>
-  </ol>
+
+  <div class="mathblock">
+    $$ k(x,x') = \exp\!\big(-\lVert x-x'\rVert^2 / 2\ell^2\big) $$
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 178" role="img" aria-label="RBF kernel correlation versus distance, for a small and a large length scale.">
+      <line x1="50" y1="90" x2="440" y2="90" class="grid"/>
+      <line x1="50" y1="24" x2="50" y2="150" class="axis"/>
+      <line x1="50" y1="150" x2="448" y2="150" class="axis" marker-end="url(#ah-dim)"/>
+      <text x="46" y="34"  font-size="9.5" class="muted" text-anchor="end">1</text>
+      <text x="46" y="94"  font-size="9.5" class="muted" text-anchor="end">0.5</text>
+      <text x="46" y="153" font-size="9.5" class="muted" text-anchor="end">0</text>
+      <text x="40" y="18"  font-size="10" fill="#a3b0c2" text-anchor="start">k(x, x&#8242;)</text>
+      <text x="250" y="172" font-size="10" class="muted" text-anchor="middle">distance |x &#8722; x&#8242;| &#8594;</text>
+      <polyline fill="none" stroke="#f0b72f" stroke-width="2.4" points="50,30 98.75,59.4 147.5,111 196.25,140.4 245,148.7 293.75,149.9 342.5,150 391.25,150 440,150"/>
+      <polyline fill="none" stroke="#5ec8ff" stroke-width="2.4" points="50,30 98.75,35.8 147.5,51.2 196.25,72.6 245,95 293.75,114.6 342.5,129.4 391.25,139 440,144.7"/>
+      <text x="185" y="120" font-size="10.5" fill="#f0b72f" text-anchor="start">small &#8467;</text>
+      <text x="300" y="108" font-size="10.5" fill="#5ec8ff" text-anchor="start">large &#8467;</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig. 2</b> — the RBF kernel as a function of distance. A
+    <span style="color:var(--gold)">small \(\ell\)</span> de-correlates points quickly, so
+    the GP trusts its own interpolation only very locally; a
+    <span style="color:var(--blue)">large \(\ell\)</span> assumes a smooth function and
+    extrapolates confidently.
+  </p>
+
+  <h3>Choosing where to look: Expected Improvement</h3>
+  <p>
+    Given the posterior, the next query maximizes an <b>acquisition function</b>.
+    Expected Improvement over the incumbent \(f_{\text{best}}\) splits cleanly into an
+    exploit term and an explore term:
+  </p>
+
+  <div class="mathblock">
+    $$ \mathrm{EI}(x) = \underbrace{\textcolor{#56d364}{(f_{\text{best}}-\xi-\mu)\,\Phi(z)}}_{\text{exploit}} \;+\; \underbrace{\textcolor{#5ec8ff}{\sigma\,\phi(z)}}_{\text{explore}}, \qquad z=\frac{f_{\text{best}}-\xi-\mu}{\sigma} $$
+  </div>
+  <p class="fignote">
+    \(\Phi, \phi\) are the standard-normal CDF and PDF; \(\xi\) is a margin that tilts the
+    balance. The first term rewards a low predicted mean, the second rewards high
+    uncertainty — so EI keeps probing unexplored regions instead of only the current best.
+  </p>
 
   <div class="demo" data-demo="bayes"></div>
-
-  <div class="callout good">
-    <strong>Watch it reason.</strong> The dashed grey curve is the hidden function
-    (the algorithm cannot see it). Blue is the GP's mean belief; the blue band is its
-    ±2σ uncertainty. Green at the bottom is Expected Improvement, and the white line
-    is where it will sample next. Hit <strong>"sample next"</strong> and watch the
-    band collapse around the new point and EI redistribute. Notice it doesn't just
-    drill into the current best — it keeps probing wide, uncertain regions, because EI
-    values the <em>chance</em> of a surprise. <code>length scale</code> sets how smooth
-    it assumes <code>f</code> is; <code>ξ</code> tilts the explore/exploit balance.
-  </div>
-
-  <p>
-    The pay-off is dramatic sample efficiency: tens of evaluations where a swarm would
-    use thousands. The cost is the <code>O(n³)</code> GP fit, which is exactly why BO
-    is reserved for the regime where <code>f</code> is so expensive that <code>n</code>
-    stays small. It is the standard tool behind automated hyperparameter tuning.
+  <p class="caption">
+    <b>live</b> — the dashed curve is the hidden objective, blue is the GP mean, the band
+    is \(\pm 2\sigma\), and green is EI. Each <em>sample next</em> evaluates \(f\) at the
+    EI maximizer (white line) and you watch the band collapse there.
   </p>
+
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Hit <strong>sample next</strong> repeatedly and watch the band tighten where data
+    lands. Raise <strong>\(\xi\)</strong> to bias toward exploration. Drop the
+    <strong>length scale \(\ell\)</strong> and the GP assumes a wigglier function, so it
+    trusts its interpolation less. This is the machinery behind most hyperparameter tuners.
+  </div>
 </section>
 
-<!-- ============================ COMPARE ============================ -->
-<section id="compare">
-  <h2><span class="num">07</span> So which one do I use?</h2>
-  <p class="lede">There is no universal winner — and that's a theorem, not an excuse.</p>
+<!-- ===================== PICK ===================== -->
+<section id="pick">
+  <h2><span class="num">08</span> Choosing: there is no free lunch</h2>
+  <p class="lede">Averaged over all objectives, every optimizer ties. A method wins only by matching structure.</p>
 
   <p>
-    The <strong>No Free Lunch theorem</strong> (Wolpert &amp; Macready, 1997) proves
-    that averaged over <em>all</em> possible objective functions, every optimizer
-    performs identically. A method only wins by matching the <em>structure</em> of
-    your particular problem. So the real question is never "what's the best algorithm"
-    but "what do I know about my landscape and my budget?"
+    The No Free Lunch theorem (Wolpert &amp; Macready, 1997) is precise about this: no
+    black-box optimizer is better than any other across all possible objectives. So the
+    question is never "which is best" but "what is known about this landscape and this
+    budget".
+  </p>
+
+  <h3>Match the method to the landscape</h3>
+  <p>
+    Two axes capture most of the decision: how much <em>structure</em> the landscape has
+    (smooth and unimodal versus rugged and multimodal), and how big the
+    <em>evaluation budget</em> is. Each method has a corner where it is the natural pick:
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 480 252" role="img" aria-label="A map placing each optimizer by landscape structure and evaluation budget.">
+      <!-- axes -->
+      <line x1="70" y1="210" x2="70" y2="30"  class="axis" marker-end="url(#ah-dim)"/>
+      <line x1="70" y1="210" x2="450" y2="210" class="axis" marker-end="url(#ah-dim)"/>
+      <!-- axis end labels -->
+      <text x="74"  y="226" font-size="9.5" class="muted" text-anchor="start">smooth, unimodal</text>
+      <text x="446" y="226" font-size="9.5" class="muted" text-anchor="end">rugged, multimodal</text>
+      <text x="255" y="244" font-size="10" fill="#a3b0c2" text-anchor="middle">landscape structure &#8594;</text>
+      <text transform="rotate(-90 30 120)" x="30" y="120" font-size="10" fill="#a3b0c2" text-anchor="middle">evaluation budget &#8594;</text>
+      <text x="80" y="42" font-size="9.5" class="muted" text-anchor="start">many / cheap</text>
+      <!-- chips -->
+      <g>
+        <rect x="109" y="50" width="82" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="150" y="64" font-size="10" fill="#9aa6b2" text-anchor="middle" class="plain">hill climbing</text>
+      </g>
+      <g>
+        <rect x="94" y="102" width="52" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="120" y="116" font-size="10" fill="#3ad0c0" text-anchor="middle" class="plain">CMA-ES</text>
+      </g>
+      <g>
+        <rect x="91" y="176" width="84" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="133" y="190" font-size="10" fill="#58a6ff" text-anchor="middle" class="plain">Bayesian opt</text>
+      </g>
+      <g>
+        <rect x="233" y="110" width="34" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="250" y="124" font-size="10" fill="#d2a8ff" text-anchor="middle" class="plain">DE</text>
+      </g>
+      <g>
+        <rect x="344" y="86" width="64" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="376" y="100" font-size="10" fill="#56d364" text-anchor="middle" class="plain">GA / PSO</text>
+      </g>
+      <g>
+        <rect x="344" y="156" width="32" height="20" rx="6" fill="#161d2b" stroke="#263041"/>
+        <text x="360" y="170" font-size="10" fill="#f0b72f" text-anchor="middle" class="plain">SA</text>
+      </g>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig.</b> — where each optimizer is the natural choice. Bayesian optimization owns
+    the few-evaluations regime; CMA-ES the smooth, ill-conditioned middle; DE the generic
+    centre; GA and PSO the rugged, multimodal corner; SA and hill-climbing the cheap,
+    single-point baselines. The full decision rule:
   </p>
 
   <table class="cmp">
-    <thead><tr><th>Method</th><th>Best when…</th><th>Evaluation cost</th><th>Watch out for</th></tr></thead>
+    <thead><tr><th>Regime</th><th>Method</th><th>Rationale</th></tr></thead>
     <tbody>
-      <tr><td>Hill climbing<br><span class="pill">baseline</span></td><td>landscape is mostly unimodal; you want a sanity baseline</td><td>cheap, many</td><td>trapped by the first local minimum</td></tr>
-      <tr><td>Simulated annealing</td><td>cheap evals, need to escape local minima, no population budget</td><td>cheap, many</td><td>cooling schedule tuning</td></tr>
-      <tr><td>Particle swarm</td><td>continuous, multimodal, want few knobs and fast setup</td><td>cheap, many</td><td>premature convergence</td></tr>
-      <tr><td>Genetic algorithm</td><td>rugged/deceptive or combinatorial structure; building blocks matter</td><td>cheap, many</td><td>slower; needs diversity care</td></tr>
-      <tr><td>Differential evolution</td><td>a strong, robust default for continuous problems</td><td>cheap, many</td><td>F/CR choice on hard cases</td></tr>
-      <tr><td>CMA-ES</td><td>smooth, ill-conditioned, <code>d ≲ 100</code>; sample efficiency matters</td><td>moderate</td><td>O(d²) cost; multimodal traps</td></tr>
-      <tr><td>Bayesian optimization</td><td><strong>expensive</strong> evals; only tens of samples affordable</td><td>very few, costly</td><td>O(n³) fit; low dimension</td></tr>
+      <tr><td>expensive evaluations</td><td>Bayesian optimization</td><td>surrogate model, O(tens) of evals</td></tr>
+      <tr><td>smooth, ill-conditioned, d ≲ 100</td><td>CMA-ES</td><td>learns the landscape metric</td></tr>
+      <tr><td>generic continuous, unknown structure</td><td>differential evolution</td><td>robust, self-scaling default</td></tr>
+      <tr><td>rugged, highly multimodal</td><td>GA / PSO</td><td>population resists local traps</td></tr>
+      <tr><td>cheap evals, no population budget</td><td>simulated annealing</td><td>single chain, escapes via Metropolis</td></tr>
+      <tr><td>baseline to beat</td><td>random-restart hill climbing</td><td>if nothing beats it, stay simple</td></tr>
     </tbody>
   </table>
 
-  <p>
-    A practical decision tree: <strong>Is each evaluation expensive?</strong> →
-    Bayesian optimization. Otherwise, <strong>is the landscape smooth and
-    ill-conditioned, in modest dimension?</strong> → CMA-ES. Otherwise, for a rugged
-    multimodal continuous problem, reach for <strong>DE, PSO, or a GA</strong> — and
-    always run <strong>random-restart hill climbing</strong> as the baseline they must
-    beat. If a fancy method can't beat random restarts, it isn't earning its
-    complexity.
-  </p>
-
-  <div class="callout">
-    <strong>The meta-lesson.</strong> In practice the biggest wins rarely come from
-    the algorithm choice. They come from (1) a <em>good representation</em> of the
-    problem, (2) <em>warm starts</em> from a sensible heuristic instead of random
-    initialization, and (3) a <em>fast surrogate</em> so you can afford more
-    evaluations. The optimizer is the last 10%.
+  <div class="callout warn">
+    <span class="h">The part that actually moves the needle</span>
+    In practice the largest gains rarely come from the optimizer. They come from a good
+    <b>representation</b>, a <b>warm start</b> from a domain heuristic instead of random
+    initialization, and a <b>cheap surrogate</b> that buys more evaluations. The
+    optimizer is the last ten percent. See <code>docs/04_results.md</code> for the full
+    benchmark table behind this.
   </div>
 </section>
 
-<!-- ============================ STORY ============================ -->
-<section id="story">
-  <h2><span class="num">08</span> Where this came from</h2>
-  <p class="lede">An honest postmortem of the hackathon that produced this toolbox.</p>
+<!-- ===================== TWIST ===================== -->
+<section id="twist">
+  <h2><span class="num">09</span> The twist</h2>
+  <p class="lede">We deployed the entire arsenal. The problem turned out to be nearly trivial.</p>
 
   <p>
-    This library was not built in the abstract. It came out of the
-    <strong>Delta 2026 hackathon</strong>, whose Task D asked us to time the
-    <strong>341 traffic lights</strong> of a city road network to minimize the total
-    delay of <strong>5,215 vehicles</strong> over a four-hour mesoscopic simulation.
-    Each light has phases, green durations, and an <em>offset</em> — so the decision
-    vector lived in a few hundred dimensions, and the only way to score a candidate
-    was to run the whole simulation. A textbook expensive, high-dimensional black box.
-  </p>
-
-  <p>
-    So we threw the entire zoo at it: a multi-swarm PSO with exploratory, balanced,
-    and exploitative sub-swarms; genetic algorithms over offsets and phase orderings;
-    differential evolution and simulated annealing on a fast analytical proxy;
-    Bayesian optimization with random embeddings to fight the dimensionality; even a
-    Navier–Stokes fluid analogy for green-time allocation. The winning recipe was a
-    multi-swarm PSO seeded from a green-wave heuristic, polished by a
-    simulation-feedback loop.
+    Back to Delta. We threw all of this at the traffic objective: a three-population
+    PSO (exploratory / balanced / exploitative, sharing a global best), GAs over the
+    signal timings, DE and SA on a fast analytical proxy of the simulator, Bayesian
+    optimization with random embeddings to fight the dimensionality, even a
+    Navier-Stokes fluid analogy for green-time allocation.
   </p>
 
   <div class="callout warn">
-    <strong>The twist.</strong> Once we reverse-engineered the official simulator, the
-    problem turned out to be nearly <em>trivial</em>: with the given demand the network
-    was so under-saturated that almost any sane configuration — essentially
-    "all-green, never stop anyone" — was within a fraction of a percent of optimal.
-    The elaborate optimizer tournament was, for <em>that</em> instance, overkill.
+    <span class="h">Then we reverse-engineered the scoring</span>
+    Once the official simulator's exact cost was understood, the verdict was clear:
+    with the given demand the network was so under-saturated that almost any sane plan
+    was within a fraction of a percent of optimal. "All green, never stop anyone" was
+    essentially the answer. The optimizer tournament was contesting the last decimal of
+    a problem that barely was one.
   </div>
 
+  <h3>The ceiling was flat</h3>
   <p>
-    Which is exactly why this site exists. The contest answer was throwaway, but the
-    <strong>toolbox and the understanding were not</strong>. We pulled the algorithms
-    out of the one-off hackathon code, rewrote them cleanly against standard benchmark
-    functions where their real character shows, tested them, and wrote up the theory
-    you just read. The lesson the hackathon taught — <em>understand your problem
-    before you optimize it</em> — is the same one in the box above. The optimizer is
-    the last 10%.
+    The objective <em>had</em> an enormous cost range — you can build a genuinely
+    terrible plan. But every <em>reasonable</em> plan landed in a thin band just above the
+    optimum, so all our sophistication moved the score by less than a percent:
   </p>
 
-  <p style="margin-top:28px">
-    📦 The Python package, tests, and these pages live together as one repo:
-    <code>metaheuristics-lab</code>. Every algorithm here is ~80 readable lines with a
-    docstring that <em>is</em> its theory section. Clone it, <code>pip install -e .</code>,
-    and <code>python examples/compare_optimizers.py</code> to reproduce the leaderboard.
+  <div class="fig">
+    <svg viewBox="0 0 480 210" role="img" aria-label="Cost range of traffic plans: an absurd plan is far above, but all sane plans cluster just over the optimum.">
+      <!-- axes -->
+      <line x1="64" y1="40" x2="64" y2="184"  class="axis"/>
+      <line x1="64" y1="184" x2="450" y2="184" class="axis" marker-end="url(#ah-dim)"/>
+      <text x="40" y="34" font-size="10" fill="#a3b0c2" text-anchor="start">cost (total delay)</text>
+      <text x="255" y="204" font-size="10" class="muted" text-anchor="middle">plan quality &#8594;</text>
+      <!-- optimum floor -->
+      <line x1="64" y1="162" x2="440" y2="162" stroke="#56d364" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="438" y="156" font-size="9.5" fill="#56d364" text-anchor="end">true optimum (floor)</text>
+      <!-- band of all sane plans -->
+      <rect x="120" y="138" width="320" height="24" rx="3" fill="#56d364" opacity="0.10"/>
+      <text x="280" y="131" font-size="10" fill="#9aa6b2" text-anchor="middle">every sane plan lands in this thin band</text>
+      <!-- absurd plan, far above -->
+      <line x1="100" y1="62" x2="100" y2="184" stroke="#ff7b72" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+      <circle cx="100" cy="62" r="5" fill="#ff7b72"/>
+      <text x="112" y="60" font-size="10.5" fill="#ff7b72" text-anchor="start">an actively bad plan</text>
+      <!-- sane plans -->
+      <circle cx="170" cy="150" r="5" fill="#f0b72f"/>
+      <circle cx="300" cy="156" r="5" fill="#58a6ff"/>
+      <text x="170" y="178" font-size="10.5" fill="#f0b72f" text-anchor="middle">all-green plan</text>
+      <text x="300" y="178" font-size="10.5" fill="#58a6ff" text-anchor="middle">full arsenal</text>
+      <!-- the tiny gap brace, on the right -->
+      <line x1="458" y1="150" x2="458" y2="162" stroke="#a3b0c2" stroke-width="1.2"/>
+      <line x1="454" y1="150" x2="462" y2="150" stroke="#a3b0c2" stroke-width="1.2"/>
+      <line x1="454" y1="162" x2="462" y2="162" stroke="#a3b0c2" stroke-width="1.2"/>
+      <text x="468" y="159" font-size="9.5" class="muted" text-anchor="start">&lt;1%</text>
+    </svg>
+  </div>
+  <p class="caption">
+    <b>fig.</b> — the cost range is huge (a bad plan sits far above), but the
+    <span style="color:var(--gold)">do-nothing "all-green" baseline</span> already lands
+    in the thin band just over the optimum, and the
+    <span style="color:var(--blue)">full optimizer arsenal</span> only shaves a sliver off
+    it. The tournament was fought inside that \(<\!1\%\) gap.
+  </p>
+
+  <p>
+    Which is the most useful thing the hackathon could have taught us, and exactly the
+    point of the callout above: <b>characterize the objective before optimizing it</b>.
+    We spent days tuning swarms; an afternoon of demand analysis would have shown the
+    ceiling was flat.
+  </p>
+  <p>
+    The contest solution was disposable. The toolbox was not. We pulled the algorithms
+    out of the hackathon code, reimplemented them cleanly against standard benchmark
+    functions where their behavior is legible, tested them, and built this page so the
+    mechanics stick. Everything here runs the real algorithm, live.
+  </p>
+
+  <p style="margin-top:26px">
+    📦 Code, tests, and this site live in one repo: <code>metaheuristics-lab</code>.
+    Each optimizer is a short, documented module. Run
+    <code>python examples/compare_optimizers.py</code> to reproduce the benchmark
+    leaderboard.
   </p>
 </section>
 
@@ -514,13 +1078,13 @@ sigma = sigma * exp(...)            <span class="c"># adapt the step size</span>
 
 <footer class="wrap">
   <p>
-    <strong>metaheuristics-lab</strong> — a clean library of black-box optimizers +
-    this explainer. NumPy-only, MIT-licensed.
+    <b>metaheuristics-lab</b> · a small, readable NumPy library of these optimizers plus
+    this explainer. MIT licensed.
   </p>
   <p>
-    Built from the Delta 2026 hackathon traffic-optimization project. All demos run
-    the real algorithms live in your browser — no server, no build step. View the
-    source of any demo in <code>web/js/</code>.
+    Built from the Delta 2026 hackathon traffic-optimization project. Every demo runs
+    the real algorithm client-side, no server and no build step. Demo source is in
+    <code>web/js/</code>.
   </p>
 </footer>
 
