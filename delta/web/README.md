@@ -16,4 +16,4 @@ npm run build    # production build into dist/
 ```
 
 The production build is deployed by the repository's GitHub Pages workflow and
-served at `/metaheuristics-lab/delta/`, linked from the methods explainer.
+served at `/without-a-gradient/delta/`, linked from the methods explainer.

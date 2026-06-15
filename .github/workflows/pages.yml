@@ -2,7 +2,7 @@
 #
 # The site root is the vanilla explainer in web/ (no build step). The interactive
 # Delta page in delta/web/ is a small Vite app; we build it and drop the output
-# under delta/ so it is served at /metaheuristics-lab/delta/. The two are
+# under delta/ so it is served at /without-a-gradient/delta/. The two are
 # assembled into a single _site directory and uploaded as the Pages artifact.
 # Pages source is set to "GitHub Actions" in the repo settings (done once via the
 # API on first setup).

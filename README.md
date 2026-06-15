@@ -1,49 +1,64 @@
 <div align="center">
 
-# 🐝 metaheuristics-lab
+# 🚦 without a gradient
 
-**Seven black-box optimisers, the theory behind each one, and the city traffic problem that started it all.**
+### *Optimising a function you're not allowed to differentiate.*
 
-**[→ Open the explainer](https://rubendahan.github.io/metaheuristics-lab/)** · **[→ Try the interactive Delta demo](https://rubendahan.github.io/metaheuristics-lab/delta/)**
+A hands-on tour of black-box optimisation: seven metaheuristics, the theory behind
+each one, and live demos you can drive in the browser. It grew out of a city
+traffic problem at the **Delta 2026 hackathon**, which is also here, optimiser and
+all.
+
+**[▶ Open the explainer](https://rubendahan.github.io/without-a-gradient/)**  ·  **[▶ Try the Delta demo](https://rubendahan.github.io/without-a-gradient/delta/)**
 
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![NumPy](https://img.shields.io/badge/NumPy-only-013243?logo=numpy&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-MIT-success)
+
+<a href="https://rubendahan.github.io/without-a-gradient/">
+  <img src="docs/explainer.png" alt="The explainer: an interactive tour of black-box optimisers" width="90%" />
+</a>
 
 </div>
 
-## What this is
+## The idea
 
-This started at the **Delta 2026 hackathon**, set by **Mireo**: retime a whole
-city's traffic signals so a fleet of vehicles loses as little total time as
-possible over four hours. You submit a full plan, a simulator runs the city, and
-you get back a single number. We threw every metaheuristic we knew at it, and the
-most useful result was realising the problem barely needed optimising at all.
+Sometimes you cannot differentiate the thing you want to minimise. There is no
+formula, no convexity, maybe not even a stable value, just a box you can hand a
+point and a number it hands back. Every query might be slow or noisy. A whole
+family of algorithms is built for exactly that setting, and they all make the same
+trade in different ways: explore the unknown, or refine the best thing found so
+far.
 
-We kept the toolbox. This repository is the cleaned-up version of it, bundled as
-one pack:
+This repo is three things in one:
 
-- **an explainer site** that teaches each optimiser with live, in-browser demos,
-- **a small NumPy library** of the optimisers behind one consistent API,
-- **the Delta traffic application**, with an interactive page and an honest
-  stand-in for Mireo's simulator so the methods can be run on the real problem.
+- 🧠 **an explainer site** that teaches each method with typeset maths, hand-drawn
+  figures, and canvas demos that run the real algorithm as you watch;
+- 📦 **a small NumPy library** of the optimisers behind one consistent API;
+- 🚦 **the Delta application**, the traffic-signal problem that started it, with an
+  interactive optimiser and an honest finding.
 
-## The explainer site
+## See it run
 
-The [`web/`](web/) folder is a static, zero-build page that explains every method
-with typeset maths, hand-drawn figures, and demos that run the real algorithm on a
-canvas: drag the inertia weight and watch a swarm converge, cool a simulated
-annealing walker, evolve a population, watch a CMA-ES ellipse learn a valley, or
-trace a Gaussian process as Bayesian optimisation picks its next point.
+A few things worth a look on the [live explainer](https://rubendahan.github.io/without-a-gradient/):
 
-**[Open it live →](https://rubendahan.github.io/metaheuristics-lab/)**
+- 🐝 **Particle swarm.** Push the inertia past 1 and the swarm refuses to settle;
+  drop it and the whole flock collapses into the nearest basin.
+- 🔥 **Simulated annealing.** Watch a single walker accept uphill moves while it is
+  hot, then freeze into a valley as it cools.
+- 🥚 **CMA-ES.** On a curved valley the sampling ellipse rotates and stretches until
+  it lies along the floor, learning the landscape without a gradient.
+- 📈 **Bayesian optimisation.** Step through one expensive evaluation at a time and
+  see the surrogate decide where to look next.
+
+Every demo runs the real algorithm on a canvas. Nothing is a recording.
 
 ## The library
 
-Every optimiser minimises a scalar objective `f: ℝᵈ → ℝ` over a box and returns
-the same `Result`, so swapping one for another is a one-line change.
+Every optimiser minimises `f: ℝᵈ → ℝ` over a box and returns the same `Result`, so
+swapping one for another is a one-line change.
 
 ```python
 from metaheuristics import ParticleSwarm, CMAES, Bounds
@@ -57,58 +72,60 @@ print(res)            # Result(name='PSO', best_f=..., best_x=[...], n_evals=...
 res = CMAES().minimize(rastrigin, bounds, seed=0)   # same call, different engine
 ```
 
-| Algorithm | Class | Family | Shines on |
-|---|---|---|---|
-| Particle Swarm | `ParticleSwarm`, `MultiSwarm` | swarm | multimodal, low effort |
-| Genetic Algorithm | `GeneticAlgorithm` | evolutionary | rugged, multimodal |
-| Differential Evolution | `DifferentialEvolution` | evolutionary | robust continuous default |
-| Simulated Annealing | `SimulatedAnnealing` | single-point | escaping local minima cheaply |
-| Hill Climbing (+ restarts) | `HillClimbing` | single-point | the honest baseline |
-| CMA-ES | `CMAES` | evolution strategy | ill-conditioned, smooth (d ≲ 100) |
-| Bayesian Optimisation | `BayesianOptimization` | surrogate | expensive objectives, few evals |
+| Algorithm | Class | Best on |
+|---|---|---|
+| Particle Swarm | `ParticleSwarm`, `MultiSwarm` | multimodal, low effort |
+| Genetic Algorithm | `GeneticAlgorithm` | rugged, multimodal |
+| Differential Evolution | `DifferentialEvolution` | robust continuous default |
+| Simulated Annealing | `SimulatedAnnealing` | escaping local minima cheaply |
+| Hill Climbing (+ restarts) | `HillClimbing` | the honest baseline |
+| CMA-ES | `CMAES` | ill-conditioned, smooth (d ≲ 100) |
+| Bayesian Optimisation | `BayesianOptimization` | expensive objectives, few evals |
 
-No optimiser wins everywhere, which is the No Free Lunch theorem in action. CMA-ES
-dominates smooth, ill-conditioned valleys; the population methods dominate rugged
-multimodal landscapes; Bayesian optimisation wins when each evaluation is
-expensive and you only get a few dozen.
+No optimiser wins everywhere. That is the No Free Lunch theorem in one line: CMA-ES
+owns smooth ill-conditioned valleys, the population methods own rugged multimodal
+ones, and Bayesian optimisation wins when each evaluation is precious.
 
-## The Delta application
+## The Delta story
 
-[`delta/`](delta/) is the traffic-signal problem itself, packaged so it is useful
-on its own. It contains the road-network model, the demand-proportional and
-all-green baselines, a multi-population PSO wired to the library, the
-flat-ceiling diagnostic, and an interactive page.
+<div align="center">
+<a href="https://rubendahan.github.io/without-a-gradient/delta/">
+  <img src="docs/delta-demo.png" alt="The interactive Delta page: a city, a live optimiser, and the flat-ceiling chart" width="90%" />
+</a>
+</div>
 
-**The finding.** For the demand we were handed, the network was so far from
-saturation that a sensible plan written in five minutes was within 1% of anything
-our optimisers found. The lesson worth keeping is to characterise the objective
-before optimising it. The interactive page lets you sweep the demand and watch
-the optimiser's gain stay near zero until the city approaches capacity.
+Delta was a hackathon set by **Mireo**: retime a whole city's traffic signals so a
+fleet of vehicles loses as little total time as possible. You submit a plan, a
+simulator runs four hours of the city, and you get back one number.
 
-**[Try the interactive Delta demo →](https://rubendahan.github.io/metaheuristics-lab/delta/)**
+We threw every metaheuristic in the library at it. Then we found the punchline: for
+the demand we were given, the network was so far from saturation that a sensible
+plan written in five minutes was within **1%** of anything the optimisers found.
+The result worth keeping was understanding the objective, not beating it. The
+[interactive page](https://rubendahan.github.io/without-a-gradient/delta/) lets you
+drag the demand and watch the optimiser's gain sit near zero until the city reaches
+capacity.
 
-**For Mireo.** The real objective is Mireo's mesoscopic simulator, which we do not
-have, so the application ships a transparent Webster and HCM delay model with the
-same query interface. To run on the real engine, implement one method,
-`evaluate(plan_vector) -> float`, and pass it to the solver. Nothing else changes.
-See [`delta/README.md`](delta/README.md).
+The application lives in [`delta/`](delta/). The real objective is Mireo's
+simulator, which we do not have, so it ships a transparent Webster and HCM delay
+model with the same query interface. To run on the real engine, implement one
+method, `evaluate(plan_vector) -> float`, and pass it to the solver. Nothing else
+changes. See [`delta/README.md`](delta/README.md).
 
-## Repository layout
+## What's in the repo
 
 ```
-metaheuristics-lab/
-  web/             the explainer site (vanilla HTML/CSS/canvas, hosted root)
-  metaheuristics/  the optimiser library (NumPy only)
+without-a-gradient/
+  web/             the explainer site (vanilla HTML, CSS, canvas)
+  metaheuristics/  the optimiser library (NumPy only, 39 tests)
   examples/        leaderboard and convergence scripts
-  tests/           39 tests for the library
   docs/            algorithm notes, API reference, benchmark results
   delta/           the Delta traffic application
     delta/         the Python package (network, plan, delay proxy, solver)
-    web/           the interactive Delta page (React + Vite)
-    tests/         19 tests for the application
+    web/           the interactive Delta page (React + Vite, 19 tests)
 ```
 
-## Running locally
+## Run it locally
 
 ```bash
 # the library
@@ -117,19 +134,14 @@ pytest -q                                 # 39 tests
 python examples/compare_optimizers.py     # leaderboard on every benchmark
 
 # the Delta application
-cd delta
-pip install -e ..                          # the library, then the app
-pip install -e .
+cd delta && pip install -e .. && pip install -e .
 python -m delta                            # build a city, optimise, diagnose
-pytest -q                                  # 19 tests
 
-# the explainer site
-#   just open web/index.html, or serve it: npm --prefix . run dev  (see package.json)
+# the explainer site: just open web/index.html, or
+npm run dev                                # serves web/ over http
 
 # the interactive Delta page
-cd delta/web
-npm install
-npm run dev
+cd delta/web && npm install && npm run dev
 ```
 
 ## License

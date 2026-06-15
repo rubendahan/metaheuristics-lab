@@ -9,6 +9,10 @@ import ConvergenceSparkline from './ConvergenceSparkline'
 
 type Mode = 'all-green' | 'sane' | 'optimized'
 const TARGET_ITERS = 60
+// One swarm generation every STEP_MS, so the run takes a few seconds and you can
+// watch the green waves form and the convergence trace draw. The map redraws
+// continuously between steps, so motion stays smooth.
+const STEP_MS = 150
 
 export default function TrafficLab() {
   const [load, setLoad] = useState(0.55)
@@ -38,13 +42,13 @@ export default function TrafficLab() {
   const rafRef = useRef(0)
 
   const stop = () => {
-    cancelAnimationFrame(rafRef.current)
+    clearTimeout(rafRef.current)
     setRunning(false)
   }
 
   // Rebuilding the city (new load) resets the view to the sane plan.
   useEffect(() => {
-    cancelAnimationFrame(rafRef.current)
+    clearTimeout(rafRef.current)
     setRunning(false)
     setVector(saneVec)
     setMode('sane')
@@ -52,7 +56,7 @@ export default function TrafficLab() {
     setIter(0)
   }, [saneVec])
 
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
+  useEffect(() => () => clearTimeout(rafRef.current), [])
 
   const showAllGreen = () => {
     stop()
@@ -67,7 +71,7 @@ export default function TrafficLab() {
     setHistory([])
   }
   const optimize = () => {
-    cancelAnimationFrame(rafRef.current)
+    clearTimeout(rafRef.current)
     const func = (x: number[]) => evaluate(net, plan, x)
     const sw = new MultiSwarm(func, plan.dim, { seed, init: saneVec })
     swarmRef.current = sw
@@ -84,9 +88,9 @@ export default function TrafficLab() {
         setRunning(false)
         return
       }
-      rafRef.current = requestAnimationFrame(loop)
+      rafRef.current = window.setTimeout(loop, STEP_MS)
     }
-    rafRef.current = requestAnimationFrame(loop)
+    rafRef.current = window.setTimeout(loop, STEP_MS)
   }
 
   const currentDelay = useMemo(() => evaluate(net, plan, vector), [net, plan, vector])
