@@ -1,12 +1,12 @@
 # Documentation
 
-Reference material for **metaheuristics-lab**. The interactive, visual version of
-the theory lives in [`../web/index.html`](../web/index.html); these pages are the
-written reference.
+Reference material for **metaheuristics-lab**. The visual version of the theory
+lives in [`../web/index.html`](../web/index.html); these pages are the written
+reference.
 
 | Doc | What's in it |
 |---|---|
-| [00, Project story](00_project_story.md) | Where the library came from: the Delta 2026 hackathon, what we built, and the honest postmortem. |
+| [00, Project story](00_project_story.md) | Where the library came from: the Delta 2026 hackathon, what we built, and the postmortem. |
 | [01, Algorithms & theory](01_algorithms.md) | The theory behind every optimizer (PSO, GA, DE, SA, CMA-ES, Bayesian, hill climbing), with the update equations and tuning notes. |
 | [02, API reference](02_api_reference.md) | `Bounds`, `Result`, `Optimizer`, and every optimizer's constructor parameters. |
 | [03, Benchmarks](03_benchmarks.md) | The six standard test landscapes and what each one stresses. |
@@ -31,5 +31,5 @@ examples/                    compare_optimizers.py, plot_convergence.py
 tests/                       pytest suite (39 tests)
 ```
 
-Each algorithm module's top-of-file docstring **is** its theory section, reading
-the source is meant to teach, not just run.
+Each algorithm module's top-of-file docstring **is** its theory section. The source
+is meant to be read, not just run.

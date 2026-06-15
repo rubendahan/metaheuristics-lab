@@ -13,7 +13,7 @@ b = get("rastrigin")            # Benchmark(func, lower, upper, f_min, x_min, ..
 b.lower, b.upper, b.f_min       # recommended box and known optimum value
 ```
 
-Why these six? Together they stress every weakness a metaheuristic can have:
+Why these six? Together they cover the main failure modes a metaheuristic can have:
 convexity vs. ruggedness, separability vs. coupling, central vs. corner optima.
 
 | Function | Box | f\* | Optimizer at | Modality | Stresses |
@@ -43,7 +43,7 @@ parabolic trough where the gradient is tiny along the valley floor. This is wher
 methods crawl.
 
 ### `rastrigin(x) = 10d + Σ [xᵢ² − 10·cos(2π xᵢ)]`
-A sphere wrapped in a cosine egg-carton, a regular grid of roughly `10ᵈ` local
+A sphere wrapped in a cosine egg-carton: a regular grid of roughly `10ᵈ` local
 minima of increasing depth toward the centre. The classic test of whether a method
 can **escape local minima**. Population diversity (GA, PSO) tends to win.
 
@@ -55,13 +55,13 @@ to find the funnel at all.
 ### `griewank(x) = 1 + Σxᵢ²/4000 − Π cos(xᵢ/√i)`
 Product of cosines over a quadratic. Strongly multimodal at small scale but the
 ripples flatten as the box grows, so difficulty paradoxically *drops* with
-dimension, a nice reminder that "multimodal" is scale-dependent.
+dimension. A reminder that "multimodal" is scale-dependent.
 
 ### `schwefel(x) = 418.9829·d − Σ xᵢ·sin(√|xᵢ|)`
-**Deceptive on purpose:** the global optimum sits near a corner of the box
+**Deceptive by design:** the global optimum sits near a corner of the box
 (`xᵢ ≈ 420.97`), far from the centre, while a strong second-best basin sits
 elsewhere. Methods with any centre bias (or that converge before exploring the
-periphery) get fooled, it's the hardest of the six for most optimizers.
+periphery) get fooled. It's the hardest of the six for most optimizers.
 
 ---
 

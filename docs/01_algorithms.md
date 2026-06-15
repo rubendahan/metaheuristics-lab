@@ -2,9 +2,9 @@
 
 A written reference for every optimizer in the library. The
 [interactive version](../web/index.html) shows each one running live; this is the
-quieter, equation-first companion. The single thread running through all of them is
-the trade-off between **exploration** (cover new ground) and **exploitation**
-(refine what already looks good).
+equation-first companion. The thread running through all of them is the trade-off
+between **exploration** (cover new ground) and **exploitation** (refine what already
+looks good).
 
 ---
 
@@ -14,9 +14,9 @@ We want `x* = argmin f(x)` over a box `[lower, upper]^d`, where `f` is a **black
 box**: you submit a candidate `x` and receive one number `f(x)`, with no gradient
 and no analytic form. Two things make it hard:
 
-- **Dimensionality**, search-space volume grows exponentially, so you can never
+- **Dimensionality**: search-space volume grows exponentially, so you can never
   grid it.
-- **Multimodality**, the landscape has many local minima that masquerade as the
+- **Multimodality**: the landscape has many local minima that masquerade as the
   global one.
 
 No metaheuristic guarantees the global optimum in general. They are stochastic
@@ -36,13 +36,13 @@ v ← w·v + c1·r1·(p − x) + c2·r2·(g − x)      r1, r2 ~ U(0,1) per coor
 x ← x + v
 ```
 
-- **`w` (inertia)**, momentum. High `w` explores, low `w` exploits. Good PSO
+- **`w` (inertia)**: momentum. High `w` explores, low `w` exploits. Good PSO
   anneals `w` from ~0.9 to ~0.4 over the run.
-- **`c1` (cognitive)**, pull toward personal memory.
-- **`c2` (social)**, pull toward the swarm's best. High `c2` collapses the swarm
+- **`c1` (cognitive)**: pull toward personal memory.
+- **`c2` (social)**: pull toward the swarm's best. High `c2` collapses the swarm
   onto the first decent point (fast, trap-prone).
 
-**Failure mode:** premature convergence, once `g` stops improving, the difference
+**Failure mode:** premature convergence. Once `g` stops improving, the difference
 terms vanish and the swarm freezes. **Fixes in the library:** a *ring topology*
 (follow a local neighbour's best so diversity survives) and *turbulent re-init* of
 the worst particles after a stagnation window. `MultiSwarm` runs three swarms with
@@ -57,13 +57,13 @@ different explore/exploit balances and shares their best (the Delta setup).
 Candidate solutions are **individuals**; natural selection does the searching. Each
 generation:
 
-1. **Selection**, *tournament*: draw `k` random individuals, keep the best. Larger
+1. **Selection** (*tournament*): draw `k` random individuals, keep the best. Larger
    `k` = stronger selection pressure (faster, but diversity collapses sooner).
-2. **Crossover**, recombine two parents. *BLX-α* samples each child gene from the
+2. **Crossover**: recombine two parents. *BLX-α* samples each child gene from the
    interval spanned by the parents, extended by `α` so children can step slightly
    beyond either parent. (Holland's *building-block hypothesis*: good partial
    solutions combine into better whole ones.)
-3. **Mutation**, Gaussian perturbation with an annealing step; the exploration
+3. **Mutation**: Gaussian perturbation with an annealing step; the exploration
    valve.
 
 **Elitism** copies the best few through untouched so the incumbent can't be lost.
@@ -81,8 +81,8 @@ to nurse diversity.
 
 ## 3. Differential Evolution, `differential_evolution.py`
 
-The connoisseur's default for continuous problems. To perturb a target `xᵢ`, add
-the **scaled difference of two other random members** (`rand/1/bin`):
+A reliable default for continuous problems. To perturb a target `xᵢ`, add the
+**scaled difference of two other random members** (`rand/1/bin`):
 
 ```
 donor v = x_a + F·(x_b − x_c)            a,b,c distinct random members
@@ -90,17 +90,17 @@ trial u = binomial-crossover(v, xᵢ, CR)  each coord from v w.p. CR, ≥1 guara
 xᵢ ← u   only if f(u) ≤ f(xᵢ)            (greedy selection)
 ```
 
-- **`F` (differential weight, ~0.5–0.9)**, step aggressiveness.
-- **`CR` (crossover prob, ~0.7–0.9)**, how much donor enters the trial. High `CR`
+- **`F` (differential weight, ~0.5–0.9)**: step aggressiveness.
+- **`CR` (crossover prob, ~0.7–0.9)**: how much donor enters the trial. High `CR`
   suits separable functions; low `CR` suits tangled coordinates.
 
-**The elegant part, self-scaling:** early, a spread-out population gives large
-difference vectors → big exploratory steps; as it converges the differences shrink
-→ fine local refinement, with *no step-size schedule*. `best/1/bin` biases the
-donor toward the incumbent for greedier convergence.
+**Self-scaling:** early, a spread-out population gives large difference vectors → big
+exploratory steps; as it converges the differences shrink → fine local refinement,
+with *no step-size schedule*. `best/1/bin` biases the donor toward the incumbent for
+greedier convergence.
 
-**Reach for it when:** you want one robust, well-behaved default for a continuous
-black box. Excellent on Rosenbrock-like valleys (second only to CMA-ES here).
+**Reach for it when:** you want one well-behaved default for a continuous black box.
+Strong on Rosenbrock-like valleys (second only to CMA-ES here).
 
 ---
 
@@ -113,17 +113,17 @@ are always taken; a worsening move of size `Δ` is accepted with probability
 P(accept) = exp(−Δ / T)
 ```
 
-- **`T` (temperature)**, high `T` accepts almost anything (roams, escapes local
+- **`T` (temperature)**: high `T` accepts almost anything (roams, escapes local
   minima); as `T → 0` only improvements survive (settles).
-- **Cooling schedule**, geometric `T ← α·T`, `α` near 1. Too fast *quenches* into
+- **Cooling schedule**: geometric `T ← α·T`, `α` near 1. Too fast *quenches* into
   a bad minimum; too slow wastes the budget. This is the one parameter that matters.
 
 The implementation scales the proposal step with `√(T/T₀)` and restarts the walker
 to the best-known point after a streak of non-improving steps.
 
 **Reach for it when:** cheap evaluations, you need to escape local minima, and you
-don't want to maintain a population. It's the cheapest "escape local minima"
-behaviour available, one point, one eval per step.
+don't want to maintain a population. It's the cheapest way to get "escape local
+minima" behaviour: one point, one eval per step.
 
 ---
 
@@ -140,9 +140,9 @@ generation:
    shrinks along the rest, using two cumulative *evolution paths* that decouple
    step-size control from shape.
 
-**Why it's special:** on an ill-conditioned curved valley (Rosenbrock), CMA-ES
-learns the valley's orientation and scale, effectively recovering second-order
-(Newton-like) information **without a gradient**.
+On an ill-conditioned curved valley (Rosenbrock), CMA-ES learns the valley's
+orientation and scale, recovering second-order (Newton-like) information **without a
+gradient**.
 
 **Trade-off:** the covariance update is `O(d²)` per step (an eigendecomposition),
 so it's for **low-to-medium dimension** (`d ≲ 100`). On a regular multimodal grid
@@ -159,9 +159,9 @@ sample efficiency matters.
 For when each `f(x)` is *expensive* (a simulation, a training run, a lab
 experiment) and you can afford only tens of evaluations. Spend compute to *think*:
 
-1. **Surrogate**, fit a *Gaussian Process* to the data so far. It returns, for any
-   `x`, a predicted mean `μ(x)` and an honest uncertainty `σ(x)`.
-2. **Acquisition**, *Expected Improvement* scores each candidate:
+1. **Surrogate**: fit a *Gaussian Process* to the data so far. It returns, for any
+   `x`, a predicted mean `μ(x)` and an uncertainty `σ(x)`.
+2. **Acquisition**: *Expected Improvement* scores each candidate:
    ```
    EI(x) = (f_best − μ(x))·Φ(z) + σ(x)·φ(z),   z = (f_best − μ(x)) / σ(x)
    ```
@@ -169,10 +169,10 @@ experiment) and you can afford only tens of evaluations. Spend compute to *think
    (explore). EI balances them automatically.
 3. **Evaluate** `f` at the EI maximizer, add the point, refit, repeat.
 
-**Trade-off:** dramatic sample efficiency, but the GP fit is `O(n³)`, so BO is for
-the small-`n` regime. It's the standard engine behind automated hyperparameter
-tuning. (Library implementation: RBF kernel, fixed noise, EI optimized by sampling,
-NumPy-only, a readable reference, not a production GP.)
+**Trade-off:** high sample efficiency, but the GP fit is `O(n³)`, so BO is for the
+small-`n` regime. It's the standard engine behind automated hyperparameter tuning.
+(Library implementation: RBF kernel, fixed noise, EI optimized by sampling,
+NumPy-only. A readable reference, not a production GP.)
 
 **Reach for it when:** evaluations are the bottleneck and you only get a few dozen.
 
@@ -203,6 +203,6 @@ matching your problem's structure. Practical decision tree:
 
 And the biggest wins usually aren't the algorithm at all: a good **representation**,
 a **warm start** from a heuristic, and a **fast surrogate** beat optimizer choice
-almost every time. The optimizer is the last 10%.
+most of the time. The optimizer is the last 10%.
 
 See [`04_results.md`](04_results.md) for the empirical version of this story.

@@ -13,7 +13,7 @@ average final `f` over 8 seeds; `best` is the luckiest seed; lower is better
 (global minimum is `f* = 0` everywhere).
 
 > **Headline:** no optimizer wins on more than two of the six landscapes. That is
-> the No Free Lunch theorem made concrete, performance is a function of how well a
+> the No Free Lunch theorem made concrete: performance is a function of how well a
 > method's bias matches the landscape's structure.
 
 ---
@@ -32,8 +32,8 @@ HillClimbing     3.0e-07     2.8e-08      1510
 SA               8.7e-04     4.7e-04      1501
 BayesOpt           0.357      0.0589        58   ← few evals, but in the right region
 ```
-Everyone solves it; the ranking is purely about convergence rate. CMA-ES is in a
-different league because it adapts its step to the bowl's curvature.
+Everyone solves it; the ranking is purely about convergence rate. CMA-ES is well
+ahead because it adapts its step to the bowl's curvature.
 
 ### rosenbrock (ill-conditioned valley), *CMA-ES territory*
 ```
@@ -48,7 +48,7 @@ GA                 0.966      0.492       7260
 BayesOpt           10.99      5.455         58
 ```
 The signature result: CMA-ES drives the banana valley to `10⁻¹²` on its best seed,
-orders of magnitude past the population methods. DE is a strong second thanks to its
+orders of magnitude past the population methods. DE is second, thanks to its
 self-scaling steps.
 
 ### rastrigin (egg-carton, ~10ᵈ minima), *diversity wins*
@@ -109,7 +109,7 @@ HillClimbing       391.0      236.9       1510
 CMA-ES             529.9      118.4       1601   ← centre bias punished hardest
 BayesOpt           662.3      396.8         58
 ```
-The deceptive landscape with its optimum near a corner punishes any centre bias , 
+The deceptive landscape with its optimum near a corner punishes any centre bias.
 CMA-ES, which starts a compact cloud and adapts locally, finishes last on the mean.
 DE and GA, which keep members scattered to the periphery, are the only ones to
 occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
@@ -123,7 +123,7 @@ occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
    encodes a bias; it wins exactly where that bias matches.
 
 2. **`mean` vs `best` tells you about reliability.** A method can have an excellent
-   `best` and a poor `mean` (CMA-ES on Ackley: `10⁻¹¹` best, `0.23` mean), that's a
+   `best` and a poor `mean` (CMA-ES on Ackley: `10⁻¹¹` best, `0.23` mean). That's a
    *bimodal* method that either nails it or gets trapped. If you only get one run,
    prefer a method with a good *mean*; if you can afford restarts, a good *best*
    matters more.
@@ -131,8 +131,8 @@ occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
 3. **Bayesian optimization looks weak here, by construction.** It used ~58
    evaluations against 1,500–7,000 for the others. The fair comparison isn't "who
    wins at fixed quality" but "who wins at *fixed evaluation budget when each
-   evaluation is expensive*", and at 58 evals, BO is already in the right region of
-   every landscape, which is the whole point.
+   evaluation is expensive*". At 58 evals, BO is already in the right region of
+   every landscape, which is the point of the method.
 
 4. **The honest baseline earns its keep.** Random-restart hill climbing beats several
    fancier methods on Rosenbrock and Ackley. Always run it; if your sophisticated
