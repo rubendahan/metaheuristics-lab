@@ -2,9 +2,9 @@
 
 The whole package is built around three small objects:
 
-* :class:`Bounds`  -- the box-constrained search space ``[lower, upper]^d``.
-* :class:`Result`  -- a uniform return value (best point, best value, history...).
-* :class:`Optimizer` -- the abstract base class every algorithm subclasses.
+* :class:`Bounds` , the box-constrained search space ``[lower, upper]^d``.
+* :class:`Result` , a uniform return value (best point, best value, history...).
+* :class:`Optimizer`, the abstract base class every algorithm subclasses.
 
 Every optimizer minimizes a scalar objective ``f: R^d -> R`` over a box.
 Maximization is obtained for free by minimizing ``-f`` (see :func:`as_minimizer`).

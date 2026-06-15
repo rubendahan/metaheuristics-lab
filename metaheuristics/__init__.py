@@ -1,4 +1,4 @@
-"""metaheuristics -- a clean, unified library of black-box optimizers.
+"""metaheuristics, a clean, unified library of black-box optimizers.
 
 A small, dependency-light (NumPy-only) collection of population- and single-point
 metaheuristics behind one consistent API. Every optimizer minimizes a scalar
@@ -16,13 +16,13 @@ Quick start
 
 Available optimizers
 --------------------
-* :class:`ParticleSwarm`, :class:`MultiSwarm` -- particle swarm optimization
-* :class:`GeneticAlgorithm`                   -- real-coded genetic algorithm
-* :class:`DifferentialEvolution`              -- differential evolution
-* :class:`SimulatedAnnealing`                 -- simulated annealing
-* :class:`HillClimbing`                       -- (random-restart) hill climbing
-* :class:`CMAES`                              -- covariance matrix adaptation ES
-* :class:`BayesianOptimization`               -- GP-surrogate Bayesian optimization
+* :class:`ParticleSwarm`, :class:`MultiSwarm`, particle swarm optimization
+* :class:`GeneticAlgorithm`                  , real-coded genetic algorithm
+* :class:`DifferentialEvolution`             , differential evolution
+* :class:`SimulatedAnnealing`                , simulated annealing
+* :class:`HillClimbing`                      , (random-restart) hill climbing
+* :class:`CMAES`                             , covariance matrix adaptation ES
+* :class:`BayesianOptimization`              , GP-surrogate Bayesian optimization
 
 Born from the Delta 2026 hackathon, where this whole toolbox was thrown at a
 traffic-signal problem; cleaned up here into something reusable. See the project

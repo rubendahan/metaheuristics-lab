@@ -1,4 +1,4 @@
-# 02 — API reference
+# 02, API reference
 
 Everything is built on three objects and one method signature. Import the public
 names straight from the top-level package:
@@ -80,7 +80,7 @@ returning `(best_x, best_f, history, converged, meta)`. The base class wraps the
 objective in an evaluation counter, seeds a NumPy `Generator`, and assembles the
 `Result`. You normally use the concrete optimizers below, not this directly.
 
-`as_minimizer(func, maximize=False)` — returns `func`, or `-func` to maximize.
+`as_minimizer(func, maximize=False)`, returns `func`, or `-func` to maximize.
 
 ---
 
@@ -148,7 +148,7 @@ the initial random design of `n_init` points. `xi` is the EI exploration margin.
 
 ---
 
-## Comparison helpers — `compare.py`
+## Comparison helpers, `compare.py`
 
 ```python
 run_trials(optimizer, func, bounds, max_iter=200, seeds=range(10)) -> dict

@@ -15,12 +15,12 @@ This module implements the canonical algorithm plus the refinements that made it
 work on a real 341-dimensional problem:
 
 * a **linear inertia schedule** ``w: w_start -> w_end`` (explore early, exploit late);
-* optional **ring topology** -- a particle follows the best of its ``k`` ring
+* optional **ring topology**, a particle follows the best of its ``k`` ring
   neighbours instead of the global best, which slows premature convergence;
 * **velocity clamping** to a fraction of the box span;
 * **turbulent re-init** of the worst particles after a stagnation window;
 * a :class:`MultiSwarm` that runs several swarms with different explore/exploit
-  balances and shares their global best -- the configuration used on Delta.
+  balances and shares their global best, the configuration used on Delta.
 """
 from __future__ import annotations
 

@@ -1085,10 +1085,18 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     mechanics stick. Everything here runs the real algorithm, live.
   </p>
 
+  <div class="callout try">
+    <span class="h">See it on the Delta problem</span>
+    There is a separate interactive page that runs the traffic-signal problem itself: a
+    small city, the optimizer working live, and the flat-ceiling finding as a chart you
+    can sweep. <a href="delta/" style="color:var(--gold);font-weight:600;text-decoration:none;border-bottom:1px solid rgba(240,183,47,0.5)">Open the interactive Delta demo →</a>
+  </div>
+
   <p style="margin-top:26px">
     📦 Code, tests, and this site live in one repo: <code>metaheuristics-lab</code>.
-    Each optimizer is a short, documented module. Run
-    <code>python examples/compare_optimizers.py</code> to reproduce the benchmark
+    The optimizers are short, documented modules, and the full Delta application (the
+    traffic-signal problem, the solver, and the page above) lives in <code>delta/</code>.
+    Run <code>python examples/compare_optimizers.py</code> to reproduce the benchmark
     leaderboard.
   </p>
 </section>

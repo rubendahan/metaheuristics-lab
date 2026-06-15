@@ -1,12 +1,12 @@
-"""CMA-ES -- Covariance Matrix Adaptation Evolution Strategy.
+"""CMA-ES, Covariance Matrix Adaptation Evolution Strategy.
 
 CMA-ES is the heavyweight of black-box continuous optimization. Instead of moving
-points around directly, it maintains a *distribution* -- a multivariate Gaussian
-``N(m, sigma^2 C)`` -- and learns its shape from the best samples each generation:
+points around directly, it maintains a *distribution*, a multivariate Gaussian
+``N(m, sigma^2 C)``, and learns its shape from the best samples each generation:
 
 1. **Sample** ``lambda`` candidates from the current Gaussian.
 2. **Select** the best ``mu`` of them.
-3. **Recombine** -- the new mean is their weighted average.
+3. **Recombine**, the new mean is their weighted average.
 4. **Adapt** the covariance ``C`` and step size ``sigma`` so the distribution
    stretches along directions that have been paying off.
 
@@ -17,7 +17,7 @@ is the ``O(d^2)`` covariance update, so it shines in low-to-medium dimension
 (roughly ``d <= 100``) where sample efficiency matters more than per-step cost.
 
 This is a compact, faithful implementation of the standard (mu/mu_w, lambda)
-algorithm from Hansen's CMA-ES tutorial -- enough to be genuinely useful and to
+algorithm from Hansen's CMA-ES tutorial, enough to be genuinely useful and to
 read as a teaching reference, without the production bells and whistles.
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ class CMAES(Optimizer):
     ----------
     pop_size:
         Number of samples per generation (``lambda``). Default
-        ``4 + floor(3*ln d)`` -- Hansen's recommendation.
+        ``4 + floor(3*ln d)``, Hansen's recommendation.
     sigma0_frac:
         Initial step size as a fraction of the (uniform) box span.
     """

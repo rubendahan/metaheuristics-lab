@@ -1,4 +1,4 @@
-# 00 — Project story
+# 00, Project story
 
 ## The hackathon
 
@@ -20,19 +20,19 @@ together), a **green duration** per phase (5–120 s, with 3 s of yellow between
 phases), and an **offset** (the cycle's shift relative to *t = 0*). So the decision
 vector lived in a few hundred dimensions, and the *only* way to score a candidate
 was to run the entire 4-hour simulation. A textbook **expensive, high-dimensional,
-black-box** optimization problem — exactly the regime metaheuristics exist for.
+black-box** optimization problem, exactly the regime metaheuristics exist for.
 
 ## What we threw at it
 
 Pretty much the whole zoo, which is why this library exists:
 
-- **Multi-swarm PSO** — three sub-swarms (exploratory / balanced / exploitative)
+- **Multi-swarm PSO**, three sub-swarms (exploratory / balanced / exploitative)
   with different inertia and cognitive/social weights, sharing a global best, run
   on a fast analytical *proxy* (~70 ms) instead of the full simulation (~5 s).
-- **Genetic algorithms** — chromosomes over green durations, offsets, and source
+- **Genetic algorithms**, chromosomes over green durations, offsets, and source
   orderings; tournament selection, uniform crossover, targeted mutation, elitism.
 - **Differential evolution** and **simulated annealing** on the proxy.
-- **Bayesian optimization** — GP surrogate with Expected Improvement, plus random
+- **Bayesian optimization**, GP surrogate with Expected Improvement, plus random
   embeddings (REMBO) and trust-region (TuRBO-style) refinement to fight the
   dimensionality.
 - A **Navier–Stokes fluid analogy** for green-time allocation (treat traffic as a
@@ -51,7 +51,7 @@ Once we reverse-engineered the official simulator's exact scoring (it took sever
 diagnostic passes to nail the rounding and conflict rules), the problem turned out
 to be nearly **trivial** for the given demand. The network was so under-saturated
 that an "all-green, never stop anyone" configuration was already within a fraction
-of a percent of optimal — there was almost no congestion for clever signal timing
+of a percent of optimal, there was almost no congestion for clever signal timing
 to relieve. The elaborate optimizer tournament was, for *that* instance, overkill.
 
 **The real lesson was the meta-lesson:** understand your problem before you
@@ -62,11 +62,11 @@ would have told us the ceiling was nearly flat.
 
 The contest answer was throwaway, but two things were worth keeping:
 
-1. **The toolbox** — clean, reusable implementations of seven optimizers behind one
+1. **The toolbox**, clean, reusable implementations of seven optimizers behind one
    API. Pulled out of the one-off hackathon scripts, rewritten against standard
    benchmark functions (where each algorithm's true character actually shows),
    documented, and tested.
-2. **The understanding** — the theory of how each method balances exploration vs.
+2. **The understanding**, the theory of how each method balances exploration vs.
    exploitation, which is captured in the [interactive explainer](../web/index.html)
    and in [`01_algorithms.md`](01_algorithms.md).
 

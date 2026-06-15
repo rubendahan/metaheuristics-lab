@@ -31,7 +31,7 @@ def optimizers():
 def main():
     for name, bench in BENCHMARKS.items():
         bounds = Bounds(bench.lower, bench.upper, dim=DIM)
-        print(f"\n=== {name}  ({DIM}D)  -- {bench.description}")
+        print(f"\n=== {name}  ({DIM}D) , {bench.description}")
         rows = []
         for opt, max_iter in optimizers():
             rows.append(

@@ -3,12 +3,12 @@
 A GA evolves a *population* of candidate solutions through three operators that
 imitate natural selection:
 
-1. **Selection** -- pick parents biased toward fitness. Tournament selection
+1. **Selection**, pick parents biased toward fitness. Tournament selection
    draws ``k`` random individuals and keeps the best; ``k`` tunes the pressure.
-2. **Crossover** -- recombine two parents into offspring. We offer *uniform*
+2. **Crossover**, recombine two parents into offspring. We offer *uniform*
    (swap genes coordinate-wise) and *BLX-alpha* (blend that can interpolate and
-   slightly extrapolate between parents -- the standard real-coded operator).
-3. **Mutation** -- perturb genes at random to inject diversity. We use Gaussian
+   slightly extrapolate between parents, the standard real-coded operator).
+3. **Mutation**, perturb genes at random to inject diversity. We use Gaussian
    mutation with a per-coordinate sigma that anneals as the run progresses.
 
 **Elitism** copies the best ``elite`` individuals unchanged into the next

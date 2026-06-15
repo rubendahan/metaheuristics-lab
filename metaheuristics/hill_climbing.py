@@ -2,11 +2,11 @@
 
 The simplest local search there is: from the current point, take a small random
 step; keep it only if it improves. With a shrinking step it converges to the
-nearest local optimum -- fast, but it has no way out of a basin once inside.
+nearest local optimum, fast, but it has no way out of a basin once inside.
 
 *Random-restart* hill climbing wraps that weakness in a loop: run many short
 climbs from independent random starts and return the best summit found. It is the
-honest baseline every fancier metaheuristic should be measured against -- if a
+honest baseline every fancier metaheuristic should be measured against, if a
 swarm or GA cannot beat random restarts, it is not earning its complexity.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ class HillClimbing(Optimizer):
         Multiply the step by this after a failed move...
     grow:
         ...and by this after a successful one (so the step adapts to the local
-        landscape -- the classic 1/5th-rule idea, simplified).
+        landscape, the classic 1/5th-rule idea, simplified).
     restarts:
         Number of independent climbs; the best summit wins. ``1`` is plain HC.
     """

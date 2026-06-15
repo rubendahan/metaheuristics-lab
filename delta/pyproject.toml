@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "delta-mireo"
+version = "0.1.0"
+description = "Delta 2026 hackathon deliverable: traffic-signal retiming via metaheuristics, with an honest mesoscopic delay proxy standing in for Mireo's simulator."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Delta 2026 hackathon team" }]
+keywords = [
+    "traffic-signals", "signal-timing", "black-box-optimization",
+    "particle-swarm", "metaheuristics", "webster-delay", "mireo", "delta-2026",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+# The optimisers come from the metaheuristics-lab library (import name
+# `metaheuristics`) that lives in the parent directory of this repo. It is
+# depended on here rather than copy-pasted. For local development install it
+# editable first, from the repo root:
+#   pip install -e ..
+# If it is ever published to an index, the line below resolves it by name.
+dependencies = [
+    "numpy>=1.21",
+    "metaheuristics-lab>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["delta*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

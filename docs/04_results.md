@@ -1,4 +1,4 @@
-# 04 — Results
+# 04, Results
 
 A reproducible leaderboard across **all 8 optimizers × all 6 benchmarks**, 4-D,
 averaged over 8 seeds. Reproduce with:
@@ -13,14 +13,14 @@ average final `f` over 8 seeds; `best` is the luckiest seed; lower is better
 (global minimum is `f* = 0` everywhere).
 
 > **Headline:** no optimizer wins on more than two of the six landscapes. That is
-> the No Free Lunch theorem made concrete — performance is a function of how well a
+> the No Free Lunch theorem made concrete, performance is a function of how well a
 > method's bias matches the landscape's structure.
 
 ---
 
 ## Per-function leaderboards
 
-### sphere (convex) — *convergence-speed sanity check*
+### sphere (convex), *convergence-speed sanity check*
 ```
 optimizer            mean        best     evals
 CMA-ES           1.0e-22     8.9e-26      1601   ← second-order-like, by far fastest
@@ -35,7 +35,7 @@ BayesOpt           0.357      0.0589        58   ← few evals, but in the right
 Everyone solves it; the ranking is purely about convergence rate. CMA-ES is in a
 different league because it adapts its step to the bowl's curvature.
 
-### rosenbrock (ill-conditioned valley) — *CMA-ES territory*
+### rosenbrock (ill-conditioned valley), *CMA-ES territory*
 ```
 optimizer            mean        best     evals
 CMA-ES           3.9e-05     2.2e-12      1601   ← learns the valley geometry
@@ -51,7 +51,7 @@ The signature result: CMA-ES drives the banana valley to `10⁻¹²` on its best
 orders of magnitude past the population methods. DE is a strong second thanks to its
 self-scaling steps.
 
-### rastrigin (egg-carton, ~10ᵈ minima) — *diversity wins*
+### rastrigin (egg-carton, ~10ᵈ minima), *diversity wins*
 ```
 optimizer            mean        best     evals
 GA               7.8e-07         0.0      7260   ← crossover diversity finds the centre
@@ -66,7 +66,7 @@ BayesOpt           20.88      12.11        58
 The mirror image of Rosenbrock: here CMA-ES's single adapting cloud is a liability,
 and the GA's population diversity finds the global basin (one seed hits exactly 0).
 
-### ackley (plateau + funnel) — *needs a global view*
+### ackley (plateau + funnel), *needs a global view*
 ```
 optimizer            mean        best     evals
 MultiSwarm-PSO   4.0e-05     1.7e-06      4860
@@ -79,7 +79,7 @@ HillClimbing       1.915    2.8e-03      1510
 BayesOpt           5.844      2.619        58
 ```
 Population methods with a global view find the central funnel reliably. CMA-ES is
-bimodal — its best seed is `10⁻¹¹`, but its mean is dragged up by seeds that
+bimodal, its best seed is `10⁻¹¹`, but its mean is dragged up by seeds that
 quenched on the plateau.
 
 ### griewank (coupled cosines)
@@ -97,7 +97,7 @@ BayesOpt           2.212       1.259        58
 Tight field; the residual is the shallow ripples near the optimum that all methods
 struggle to fully iron out at this budget.
 
-### schwefel (deceptive, corner optimum) — *the hardest*
+### schwefel (deceptive, corner optimum), *the hardest*
 ```
 optimizer            mean        best     evals
 DE                 43.58      0.0398      4840
@@ -109,7 +109,7 @@ HillClimbing       391.0      236.9       1510
 CMA-ES             529.9      118.4       1601   ← centre bias punished hardest
 BayesOpt           662.3      396.8         58
 ```
-The deceptive landscape with its optimum near a corner punishes any centre bias —
+The deceptive landscape with its optimum near a corner punishes any centre bias , 
 CMA-ES, which starts a compact cloud and adapts locally, finishes last on the mean.
 DE and GA, which keep members scattered to the periphery, are the only ones to
 occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
@@ -123,15 +123,15 @@ occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
    encodes a bias; it wins exactly where that bias matches.
 
 2. **`mean` vs `best` tells you about reliability.** A method can have an excellent
-   `best` and a poor `mean` (CMA-ES on Ackley: `10⁻¹¹` best, `0.23` mean) — that's a
+   `best` and a poor `mean` (CMA-ES on Ackley: `10⁻¹¹` best, `0.23` mean), that's a
    *bimodal* method that either nails it or gets trapped. If you only get one run,
    prefer a method with a good *mean*; if you can afford restarts, a good *best*
    matters more.
 
-3. **Bayesian optimization looks weak here — by construction.** It used ~58
+3. **Bayesian optimization looks weak here, by construction.** It used ~58
    evaluations against 1,500–7,000 for the others. The fair comparison isn't "who
    wins at fixed quality" but "who wins at *fixed evaluation budget when each
-   evaluation is expensive*" — and at 58 evals, BO is already in the right region of
+   evaluation is expensive*", and at 58 evals, BO is already in the right region of
    every landscape, which is the whole point.
 
 4. **The honest baseline earns its keep.** Random-restart hill climbing beats several
@@ -139,5 +139,5 @@ occasionally find the true corner (GA hits `2×10⁻¹³` on one seed).
    optimizer can't beat it, it isn't earning its complexity.
 
 > Numbers will shift with `DIM`, `SEEDS`, and `max_iter` in
-> `examples/compare_optimizers.py` — but the *shape* of the story (smooth → CMA-ES,
+> `examples/compare_optimizers.py`, but the *shape* of the story (smooth → CMA-ES,
 > rugged → GA/PSO, expensive → BO) is robust. That shape is the whole lesson.

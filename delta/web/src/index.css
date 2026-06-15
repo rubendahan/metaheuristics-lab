@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+/* Design tokens. A calm paper background, ink text, and a traffic-light accent
+   set (flow green, warn amber, jam red) that the whole map and charts reuse. */
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-paper: #f6f7f9;
+  --color-card: #ffffff;
+  --color-ink: #0f1729;
+  --color-muted: #5b6577;
+  --color-line: #e6e8ee;
+
+  --color-accent: #2f6df6;
+  --color-accent-soft: #eaf1ff;
+
+  --color-flow: #18a558; /* free flowing */
+  --color-warn: #e8a317; /* loading up */
+  --color-jam: #e5484d; /* saturated */
+
+  --color-night: #0e1422; /* the city canvas background */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric read-outs line up nicely with tabular figures. */
+.tnum {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A thin moving dash for a coordinated green wave on the map legend. */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}

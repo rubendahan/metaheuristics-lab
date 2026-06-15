@@ -13,6 +13,11 @@ dist/
 venv/
 env/
 
+# Node / frontend (delta/web)
+node_modules/
+*.local
+.vite/
+
 # OS / editor
 .DS_Store
 Thumbs.db

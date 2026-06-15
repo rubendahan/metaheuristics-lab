@@ -6,12 +6,12 @@ All are written to work in any dimension unless noted, and each carries metadata
 
 These are the classic landscapes used to stress-test metaheuristics:
 
-* **sphere**     -- convex bowl, the easy sanity check.
-* **rosenbrock** -- the banana valley; gradient methods love it, samplers struggle.
-* **rastrigin**  -- a sphere wrapped in a cosine egg-carton: ~10^d local minima.
-* **ackley**     -- nearly flat outer plateau with a deep central funnel.
-* **griewank**   -- product of cosines; deceptively multimodal at small scale.
-* **schwefel**   -- global optimum sits far from the centre, near the box corner.
+* **sphere**    , convex bowl, the easy sanity check.
+* **rosenbrock**, the banana valley; gradient methods love it, samplers struggle.
+* **rastrigin** , a sphere wrapped in a cosine egg-carton: ~10^d local minima.
+* **ackley**    , nearly flat outer plateau with a deep central funnel.
+* **griewank**  , product of cosines; deceptively multimodal at small scale.
+* **schwefel**  , global optimum sits far from the centre, near the box corner.
 
 Reference: Jamil & Yang, "A literature survey of benchmark functions for global
 optimization problems" (2013).

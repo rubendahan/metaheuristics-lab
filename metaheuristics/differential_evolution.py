@@ -13,7 +13,7 @@ guaranteed). The trial replaces the target only if it is at least as good
 
 The magic is *self-scaling*: early on the population is spread out, so the
 difference ``x_b - x_c`` is large and DE takes big exploratory steps; as it
-converges the differences shrink and the steps fine-tune automatically -- no
+converges the differences shrink and the steps fine-tune automatically, no
 explicit step-size schedule needed. ``best/1/bin`` biases the donor toward the
 incumbent for faster (greedier) convergence.
 """

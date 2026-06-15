@@ -6,9 +6,9 @@ improvement; a *worse* move is accepted with probability
 
     P = exp(-(f(x') - f(x)) / T)
 
-The *temperature* ``T`` starts high (almost any move is accepted -- the search
+The *temperature* ``T`` starts high (almost any move is accepted, the search
 roams freely and escapes local minima) and is lowered on a *cooling schedule*
-toward zero (only improving moves survive -- the search settles). The art is in
+toward zero (only improving moves survive, the search settles). The art is in
 the schedule: too fast and you freeze in a bad basin, too slow and you waste
 evaluations.
 

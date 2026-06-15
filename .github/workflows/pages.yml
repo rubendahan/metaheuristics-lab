@@ -1,8 +1,12 @@
-# Publishes the static explainer in web/ to GitHub Pages.
-# No build step: the site is vanilla HTML/CSS/ES-modules, so we just upload the
-# web/ directory as the Pages artifact and deploy it. Source is set to "GitHub
-# Actions" in the repo's Pages settings (done once, via the API, on first setup).
-name: Deploy explainer to GitHub Pages
+# Publishes the site to GitHub Pages.
+#
+# The site root is the vanilla explainer in web/ (no build step). The interactive
+# Delta page in delta/web/ is a small Vite app; we build it and drop the output
+# under delta/ so it is served at /metaheuristics-lab/delta/. The two are
+# assembled into a single _site directory and uploaded as the Pages artifact.
+# Pages source is set to "GitHub Actions" in the repo settings (done once via the
+# API on first setup).
+name: Deploy site to GitHub Pages
 
 on:
   push:
@@ -28,9 +32,27 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build the interactive Delta page
+        working-directory: delta/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -r web/. _site/
+          mkdir -p _site/delta
+          cp -r delta/web/dist/. _site/delta/
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web            # the site root is web/index.html
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

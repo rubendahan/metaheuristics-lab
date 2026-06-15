@@ -4,7 +4,7 @@ When each evaluation of ``f`` is *expensive* (a simulation, a training run, a la
 experiment), you cannot afford the thousands of samples a swarm or GA needs.
 Bayesian optimization spends compute to *think* instead of to *sample*:
 
-1. Fit a cheap probabilistic **surrogate** -- a Gaussian Process -- to the data
+1. Fit a cheap probabilistic **surrogate**, a Gaussian Process, to the data
    seen so far. The GP returns, for any point, a predicted mean ``mu(x)`` and an
    uncertainty ``sigma(x)``.
 2. Maximize an **acquisition function** over that surrogate to decide where to
@@ -21,7 +21,7 @@ method would use thousands. The cost is the ``O(n^3)`` GP fit, so BO is the tool
 of choice precisely when ``f`` is so expensive that ``n`` stays small.
 
 This is a compact, dependency-free GP (RBF kernel, fixed noise) with EI optimized
-by sampling -- a faithful, readable reference rather than a production library.
+by sampling, a faithful, readable reference rather than a production library.
 """
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ class BayesianOptimization(Optimizer):
     Notes
     -----
     Here ``max_iter`` is the number of *sequential, surrogate-guided* evaluations
-    after the initial design -- BO's whole point is to make that number small.
+    after the initial design, BO's whole point is to make that number small.
     """
 
     name = "BayesOpt"
