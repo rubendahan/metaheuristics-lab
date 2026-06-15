@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { RoadNetwork } from '../sim/network'
+import { totalArrival } from '../sim/network'
 import type { SignalPlan } from '../sim/plan'
-import { intersectionStats } from '../sim/delay'
-import { satColor } from '../lib/format'
 
 interface Props {
   net: RoadNetwork
@@ -10,14 +9,36 @@ interface Props {
   vector: number[]
 }
 
-// The city, drawn on a dark canvas. Each junction is a node coloured by its
-// worst movement saturation (green flowing, red jammed) with a ring that shows
-// the green split. Corridors that are well coordinated carry a flowing green
-// wave; badly coordinated ones show a faint red link.
+// The city as a small, legible traffic simulation. Streets carry cars that drive
+// at a steady speed and stop at red lights, so queues build up wherever a signal
+// cannot clear its demand. The lights cycle in real time from the current plan:
+// each junction is green for the main street for a fraction of its cycle (the
+// green split) and shifted by its offset, so well-coordinated offsets send a
+// platoon through several greens in a row (a green wave). When you optimise, you
+// watch the queues shrink and the waves line up.
+
+interface Car {
+  s: number // position along the lane, 0..1
+  prevS: number
+}
+interface Lane {
+  nodes: { k: number; s: number }[] // intersections on this lane, sorted along it
+  demand: number // cars per second to spawn, from the lane's demand
+  v: number // speed in lane-fraction per second
+  line: number // row index (h lanes) or col index (v lanes)
+  cars: Car[]
+}
+
+const SPEEDUP = 16 // compress real seconds so a 90 s cycle plays in a few seconds
+const STOP = 0.02 // gap a car keeps before a red light, in lane fraction
+const GAP = 0.024 // gap a car keeps behind the car ahead
+const SPAWN = 7 // spawn-rate scale
+const MAX_CARS = 42
+
+const frac = (x: number) => x - Math.floor(x)
+
 export default function CityMap({ net, plan, vector }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  // Latest props in refs so the animation loop always draws the current plan
-  // without restarting on every optimiser step.
   const props = useRef({ net, plan, vector })
   props.current = { net, plan, vector }
 
@@ -26,7 +47,10 @@ export default function CityMap({ net, plan, vector }: Props) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     let raf = 0
-    let dash = 0
+    let last = performance.now()
+    let builtFor: RoadNetwork | null = null
+    let rows: Lane[] = []
+    let cols: Lane[] = []
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1
@@ -39,108 +63,154 @@ export default function CityMap({ net, plan, vector }: Props) {
     const ro = new ResizeObserver(resize)
     ro.observe(canvas)
 
-    const draw = () => {
+    const buildLanes = (net: RoadNetwork) => {
+      const maxCol = Math.max(1, net.width - 1)
+      const maxRow = Math.max(1, net.height - 1)
+      const indexed = net.intersections.map((it, k) => ({ it, k }))
+      const ff = net.freeFlowTravelTime
+      rows = []
+      for (let r = 0; r < net.height; r++) {
+        const here = indexed.filter((e) => e.it.row === r).sort((a, b) => a.it.col - b.it.col)
+        if (here.length < 2) continue
+        const demand =
+          here.reduce((sum, e) => sum + totalArrival(e.it.phases[0]), 0) / here.length
+        rows.push({
+          nodes: here.map((e) => ({ k: e.k, s: e.it.col / maxCol })),
+          demand,
+          v: SPEEDUP / (maxCol * ff),
+          line: r,
+          cars: [],
+        })
+      }
+      cols = []
+      for (let c = 0; c < net.width; c++) {
+        const here = indexed.filter((e) => e.it.col === c).sort((a, b) => a.it.row - b.it.row)
+        if (here.length < 2) continue
+        const demand =
+          here.reduce((sum, e) => sum + totalArrival(e.it.phases[1]), 0) / here.length
+        cols.push({
+          nodes: here.map((e) => ({ k: e.k, s: e.it.row / maxRow })),
+          demand,
+          v: SPEEDUP / (maxRow * ff),
+          line: c,
+          cars: [],
+        })
+      }
+      builtFor = net
+    }
+
+    const advance = (lane: Lane, dt: number, isGreen: (k: number) => boolean) => {
+      lane.cars.sort((a, b) => a.s - b.s)
+      for (let i = lane.cars.length - 1; i >= 0; i--) {
+        const car = lane.cars[i]
+        let limit = 1.06
+        for (const nd of lane.nodes) {
+          if (nd.s > car.s + 1e-4 && !isGreen(nd.k)) {
+            limit = Math.min(limit, nd.s - STOP)
+            break
+          }
+        }
+        if (i < lane.cars.length - 1) limit = Math.min(limit, lane.cars[i + 1].s - GAP)
+        let ns = car.s + lane.v * dt
+        if (ns > limit) ns = limit
+        if (ns < car.s) ns = car.s
+        car.prevS = car.s
+        car.s = ns
+      }
+      lane.cars = lane.cars.filter((c) => c.s <= 1.05)
+      const minS = lane.cars.length ? Math.min(...lane.cars.map((c) => c.s)) : 1
+      if (minS > GAP * 1.5 && lane.cars.length < MAX_CARS && Math.random() < lane.demand * SPAWN * dt) {
+        lane.cars.push({ s: 0, prevS: 0 })
+      }
+    }
+
+    const draw = (now: number) => {
       const { net, plan, vector } = props.current
+      if (net !== builtFor) buildLanes(net)
+      let dt = (now - last) / 1000
+      last = now
+      if (dt > 0.05) dt = 0.05 // keep the sim stable if the tab was backgrounded
+
       const rect = canvas.getBoundingClientRect()
       const W = rect.width
       const H = rect.height
-      ctx.clearRect(0, 0, W, H)
-
-      const pad = 34
+      const pad = 30
       const maxCol = Math.max(1, net.width - 1)
       const maxRow = Math.max(1, net.height - 1)
-      const px = (col: number) => pad + (col / maxCol) * (W - 2 * pad)
-      const py = (row: number) => pad + (row / maxRow) * (H - 2 * pad)
+      const xFromS = (s: number) => pad + s * (W - 2 * pad)
+      const yFromS = (s: number) => pad + s * (H - 2 * pad)
+      const xLane = (c: number) => pad + (c / maxCol) * (W - 2 * pad)
+      const yLane = (r: number) => pad + (r / maxRow) * (H - 2 * pad)
 
-      const stats = intersectionStats(net, plan, vector)
-      const timings = plan.fromVector(vector)
-      const node = (k: number) => [px(net.intersections[k].col), py(net.intersections[k].row)] as const
+      // signal state now: green[k] true means the main (horizontal) street is green
+      const tm = plan.fromVector(vector)
+      const T = (now / 1000) * SPEEDUP
+      const green = net.intersections.map((_it, k) => frac((T - tm[k].offset) / tm[k].cycleLength) < tm[k].splits[0])
 
-      // base road grid: right and down neighbours
-      ctx.lineWidth = 6
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)'
-      const byColRow = new Map<string, number>()
-      net.intersections.forEach((it, k) => byColRow.set(`${it.col},${it.row}`, k))
-      net.intersections.forEach((it, k) => {
-        const [x0, y0] = node(k)
-        const right = byColRow.get(`${it.col + 1},${it.row}`)
-        const down = byColRow.get(`${it.col},${it.row + 1}`)
-        if (right != null) {
-          const [x1, y1] = node(right)
-          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
-        }
-        if (down != null) {
-          const [x1, y1] = node(down)
-          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
-        }
-      })
+      // step the simulation
+      for (const lane of rows) advance(lane, dt, (k) => green[k])
+      for (const lane of cols) advance(lane, dt, (k) => !green[k])
 
-      // corridor coordination: green wave when offsets line up, red when they fight
-      const ideal = net.freeFlowTravelTime
+      ctx.clearRect(0, 0, W, H)
+
+      // streets
       ctx.lineCap = 'round'
-      for (const corridor of net.corridors) {
-        for (let i = 0; i + 1 < corridor.length; i++) {
-          const a = corridor[i]
-          const b = corridor[i + 1]
-          const ta = timings[a]
-          const tb = timings[b]
-          const C = 0.5 * (ta.cycleLength + tb.cycleLength)
-          let err = (((tb.offset - ta.offset - ideal) % C) + C) % C
-          if (err > C / 2) err -= C
-          const factor = (Math.abs(err) / (C / 2)) * 2 - 1 // -1 perfect, +1 worst
-          const [x0, y0] = node(a)
-          const [x1, y1] = node(b)
-          if (factor < -0.15) {
-            const good = Math.min(1, -factor)
-            ctx.strokeStyle = `rgba(24,165,88,${0.35 + 0.5 * good})`
-            ctx.lineWidth = 3
-            ctx.setLineDash([10, 8])
-            ctx.lineDashOffset = -dash
-            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
-            ctx.setLineDash([])
-          } else if (factor > 0.3) {
-            ctx.strokeStyle = `rgba(229,72,77,${0.25 * factor})`
-            ctx.lineWidth = 2.5
-            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
-          }
-        }
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+      ctx.lineWidth = 9
+      for (const lane of rows) {
+        const y = yLane(lane.line)
+        ctx.beginPath(); ctx.moveTo(xFromS(0), y); ctx.lineTo(xFromS(1), y); ctx.stroke()
+      }
+      for (const lane of cols) {
+        const x = xLane(lane.line)
+        ctx.beginPath(); ctx.moveTo(x, yFromS(0)); ctx.lineTo(x, yFromS(1)); ctx.stroke()
       }
 
-      // junctions
-      net.intersections.forEach((_inter, k) => {
-        const [x, y] = node(k)
-        const { sat } = stats[k]
-        const color = satColor(sat)
-        const r = 9
-
-        // soft glow
-        ctx.beginPath()
-        ctx.fillStyle = color
-        ctx.globalAlpha = 0.18
-        ctx.arc(x, y, r * 2.1, 0, Math.PI * 2)
+      // cars: warm when moving, red when stopped (a stopped cluster reads as a jam)
+      const drawCar = (x: number, y: number, horizontal: boolean, stopped: boolean) => {
+        ctx.save()
+        ctx.fillStyle = stopped ? '#ff5a5a' : '#ffd36b'
+        ctx.shadowColor = stopped ? '#ff5a5a' : '#ffb02e'
+        ctx.shadowBlur = stopped ? 7 : 4
+        const w = horizontal ? 8 : 4.4
+        const h = horizontal ? 4.4 : 8
+        roundRect(ctx, x - w / 2, y - h / 2, w, h, 1.4)
         ctx.fill()
-        ctx.globalAlpha = 1
+        ctx.restore()
+      }
+      const moved = (c: Car, v: number) => c.s - c.prevS > v * dt * 0.35
+      for (const lane of rows) {
+        const y = yLane(lane.line) + 3.4 // drive on the right of the centreline
+        for (const c of lane.cars) drawCar(xFromS(c.s), y, true, !moved(c, lane.v))
+      }
+      for (const lane of cols) {
+        const x = xLane(lane.line) - 3.4
+        for (const c of lane.cars) drawCar(x, yFromS(c.s), false, !moved(c, lane.v))
+      }
 
-        // split ring: green arc = main-street share of the cycle
-        const mainSplit = timings[k].splits[0]
-        ctx.lineWidth = 3
-        ctx.strokeStyle = 'rgba(255,255,255,0.16)'
-        ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.stroke()
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-        ctx.beginPath()
-        ctx.arc(x, y, r + 4, -Math.PI / 2, -Math.PI / 2 + mainSplit * Math.PI * 2)
-        ctx.stroke()
-
-        // core
-        ctx.beginPath()
-        ctx.fillStyle = color
-        ctx.arc(x, y, r, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = 'rgba(255,255,255,0.55)'
-        ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.34, 0, Math.PI * 2); ctx.fill()
+      // junctions with their signal faces
+      net.intersections.forEach((it, k) => {
+        const x = xLane(it.col)
+        const y = yLane(it.row)
+        const mainGreen = green[k]
+        ctx.fillStyle = '#0b1120'
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+        ctx.lineWidth = 1
+        roundRect(ctx, x - 7, y - 7, 14, 14, 3)
+        ctx.fill(); ctx.stroke()
+        const G = '#46d17a'
+        const R = '#ff5a5a'
+        // horizontal faces (left, right) show the main-street light
+        const hC = mainGreen ? G : R
+        const vC = mainGreen ? R : G
+        ctx.fillStyle = hC
+        ctx.fillRect(x - 7, y - 2.2, 2.2, 4.4)
+        ctx.fillRect(x + 4.8, y - 2.2, 2.2, 4.4)
+        ctx.fillStyle = vC
+        ctx.fillRect(x - 2.2, y - 7, 4.4, 2.2)
+        ctx.fillRect(x - 2.2, y + 4.8, 4.4, 2.2)
       })
 
-      dash = (dash + 0.6) % 18
       raf = requestAnimationFrame(draw)
     }
     raf = requestAnimationFrame(draw)
@@ -151,4 +221,14 @@ export default function CityMap({ net, plan, vector }: Props) {
   }, [])
 
   return <canvas ref={canvasRef} className="h-full w-full rounded-xl" />
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
 }

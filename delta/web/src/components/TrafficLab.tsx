@@ -112,13 +112,11 @@ export default function TrafficLab() {
           <CityMap net={net} plan={plan} vector={vector} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-[var(--color-muted)]">
-          <Legend color="#18a558" label="flowing" />
-          <Legend color="#e8a317" label="loading up" />
-          <Legend color="#e5484d" label="saturated" />
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block h-0.5 w-5" style={{ background: '#18a558' }} /> green wave
-          </span>
-          <span>ring = green split</span>
+          <Legend color="#ffd479" label="moving car" />
+          <Legend color="#ff5a5a" label="stopped (a queue is congestion)" />
+          <Legend color="#46d17a" label="green light" />
+          <Legend color="#ff5a5a" label="red light" />
+          <span>lights cycle from the plan</span>
         </div>
       </div>
 

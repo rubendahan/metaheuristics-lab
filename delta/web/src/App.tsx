@@ -16,9 +16,11 @@ export default function App() {
           <TrafficLab />
         </div>
         <p className="mt-3 text-sm text-[var(--color-muted)]">
-          Each junction is coloured by how loaded it is, the ring shows the share of the cycle the
-          main street gets, and a flowing green link means two junctions are coordinated into a green
-          wave. Everything updates as the optimiser works.
+          Cars drive at a steady speed and stop at red lights, so a queue building up behind a
+          signal is congestion you can see. The lights cycle from the current plan: each junction is
+          green for the main street for a slice of its cycle, shifted by its offset. When you
+          optimise, the green slices shift toward the busier streets and the offsets line up, so the
+          queues drain and a platoon can catch a run of greens.
         </p>
       </Section>
 
