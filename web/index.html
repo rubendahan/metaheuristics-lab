@@ -20,9 +20,10 @@
     <div class="kicker">🐝 a Delta 2026 hackathon spin-off</div>
     <h1>Optimizing a function<br /><span class="grad">you're not allowed to differentiate.</span></h1>
     <p class="sub">
-      No gradient, no convexity, no closed form. Just a budget of evaluations and a
-      score. This is a math-forward, interactive tour of the metaheuristics built for
-      exactly that regime, with each update rule shown running live.
+      You get no gradient, no convexity, no formula. You can plug in a point, read back
+      a score, and do that only so many times. These notes walk through the algorithms
+      that work in that setting: the update rule for each one, and a demo you can run as
+      you read.
     </p>
     <div class="tags">
       <span class="tag on">live demos</span>
@@ -144,7 +145,7 @@
 <!-- ===================== THE TRAP ===================== -->
 <section id="trap">
   <h2><span class="num">01</span> Why local descent is not enough</h2>
-  <p class="lede">One picture sets up everything.</p>
+  <p class="lede">Start with a picture of what goes wrong.</p>
 
   <h3>Greedy descent, and where it stops</h3>
   <p>
@@ -199,12 +200,12 @@
 
   <h3>The idea</h3>
   <p>
-    Scatter a handful of particles across the search space and let each one fly. A
-    particle remembers the best place <em>it</em> has personally visited, and the swarm
-    broadcasts the best place <em>anyone</em> has visited. Every step, each particle is
-    nudged toward both of those points — while keeping some of the momentum it already
-    had. That is the entire method: no gradient, just three competing tugs on a moving
-    point.
+    Scatter a handful of particles across the search space and let each one move under
+    its own velocity. A particle remembers the best point <em>it</em> has visited, and
+    the swarm as a whole keeps the best point <em>any</em> particle has found. On each
+    step a particle is pulled toward both of those points while keeping some of the
+    velocity it already had. That is the whole method: three pulls on a moving point,
+    and no gradient anywhere.
   </p>
 
   <h3>One particle's update</h3>
@@ -292,8 +293,8 @@
     <span class="h">Drive it</span>
     Push <strong>inertia \(w\)</strong> above 1 on Rastrigin: velocities grow and the
     swarm refuses to settle. Drop it to 0.3 and it collapses into the nearest basin. Zero
-    out <strong>\(c_1\)</strong> and max <strong>\(c_2\)</strong> to watch diversity die
-    as every particle chases \(\hat{\mathbf{g}}\). Use <strong>step</strong> to inspect a
+    out <strong>\(c_1\)</strong> and max <strong>\(c_2\)</strong> to watch the spread
+    collapse as every particle chases \(\hat{\mathbf{g}}\). Use <strong>step</strong> to inspect a
     single iteration.
   </div>
 </section>
@@ -613,9 +614,9 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   </div>
 
   <p>
-    That single exponential is the whole reason annealing can escape a local minimum:
-    while hot, it routinely walks uphill out of a basin; once cold, it almost never does.
-    The shape of the curve is everything:
+    That exponential is what lets annealing climb out of a local minimum: while the
+    temperature is high it walks uphill out of a basin fairly often, and once it is low
+    it almost never does. The shape of the curve says the rest:
   </p>
 
   <div class="fig">
@@ -686,7 +687,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 <!-- ===================== CMA-ES ===================== -->
 <section id="cmaes">
   <h2><span class="num">06</span> CMA-ES</h2>
-  <p class="lede">Adapt a sampling distribution, not a set of points. The strongest method on smooth problems.</p>
+  <p class="lede">Adapt a sampling distribution instead of moving points around. Usually the best choice on smooth problems.</p>
 
   <h3>Sample, rank, re-fit</h3>
   <p>
@@ -709,8 +710,8 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <h3>Learning the landscape's metric</h3>
   <p>
-    The real power is in the covariance \(\mathbf{C}\). Each generation it is bent toward
-    the directions that just produced improvement. On a curved, ill-conditioned valley
+    The interesting part is the covariance \(\mathbf{C}\). Each generation it is tilted
+    toward the directions that just produced improvement. On a curved, ill-conditioned valley
     the sampling ellipse stops being a round blob and becomes a long, thin, rotated shape
     aligned with the valley floor — the algorithm has effectively learned the local
     second-order metric, gradient-free:
@@ -763,14 +764,33 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     $$ \sigma \;\leftarrow\; \sigma\,\exp\!\Big(\tfrac{c_\sigma}{d_\sigma}\Big(\tfrac{\lVert \mathbf{p}_\sigma\rVert}{\mathbb{E}\lVert\mathcal{N}(0,\mathbf{I})\rVert} - 1\Big)\Big) $$
   </div>
 
+  <div class="demo" data-demo="cmaes"></div>
+  <p class="caption">
+    <b>live</b> — the filled teal ellipse is the \(1\sigma\) contour of the sampling
+    Gaussian and the faint ring is \(2\sigma\); the dots are one generation's \(\lambda\)
+    samples, and the dashed arrow is the step the mean just took. On Rosenbrock the
+    ellipse starts round and slowly turns into a thin diagonal sliver lying along the
+    valley. The panel's <em>axis ratio</em> is the conditioning the covariance has picked
+    up so far.
+  </p>
+
+  <div class="callout try">
+    <span class="h">Drive it</span>
+    Start on <strong>Rosenbrock</strong> and step through a dozen generations: the
+    ellipse rotates to follow the curved valley while the mean walks down it. A small
+    <strong>\(\sigma_0\)</strong> makes it creep; a large one overshoots for a few
+    generations until the step size adapts back down. More <strong>samples \(\lambda\)</strong>
+    give a steadier covariance estimate, at a higher cost per generation.
+  </div>
+
   <div class="callout">
     <span class="h">Cost and regime</span>
     The covariance update and its eigendecomposition are \(O(d^2)\)–\(O(d^3)\), so CMA-ES
     targets low-to-moderate dimension (\(d \lesssim 100\)) where sample efficiency
-    dominates per-step cost. On smooth, ill-conditioned objectives it is dominant — in
-    our benchmarks it drove Rosenbrock to \(\sim\!10^{-23}\), far past every population
-    method — while on highly multimodal landscapes a single adapting distribution can
-    still be trapped. The full standard \((\mu/\mu_w, \lambda)\) algorithm is about 90
+    dominates per-step cost. On smooth, ill-conditioned objectives it is usually the
+    best of the lot: in our benchmarks it drove Rosenbrock to \(\sim\!10^{-23}\), far
+    past every population method. On highly multimodal landscapes, though, a single
+    adapting distribution can still get trapped. The full standard \((\mu/\mu_w, \lambda)\) algorithm is about 90
     lines in <code>metaheuristics/cma_es.py</code>.
   </div>
 </section>
@@ -783,9 +803,9 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   <h3>The surrogate loop</h3>
   <p>
     When a single evaluation is genuinely expensive — a simulation, a training run, a lab
-    experiment — you can afford only tens of them. Bayesian optimization spends that tiny
-    budget wisely by never guessing blindly: it fits a cheap probabilistic <em>model</em>
-    of the objective and lets the model decide where the one next evaluation should go.
+    experiment — you can afford only tens of them. Bayesian optimization makes each one
+    count: it fits a cheap probabilistic <em>model</em> of the objective and uses that
+    model to choose where the next evaluation should go.
   </p>
 
   <div class="fig">
@@ -813,9 +833,9 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 1</b> — the loop. Everything except the gold box is cheap arithmetic; the
-    whole point is to think hard (model + acquisition) so that the one expensive call
-    lands where it is most useful.
+    <b>fig. 1</b> — the loop. Everything except the gold box is cheap arithmetic. You
+    spend that arithmetic on the model and the acquisition so the one expensive call
+    lands somewhere worth it.
   </p>
 
   <h3>The Gaussian-process posterior</h3>
@@ -978,7 +998,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   </table>
 
   <div class="callout warn">
-    <span class="h">The part that actually moves the needle</span>
+    <span class="h">Where the real gains come from</span>
     In practice the largest gains rarely come from the optimizer. They come from a good
     <b>representation</b>, a <b>warm start</b> from a domain heuristic instead of random
     initialization, and a <b>cheap surrogate</b> that buys more evaluations. The

@@ -9,7 +9,20 @@
 import { rngFrom, gauss } from "./landscape.js";
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const COL = { agent: "#5ec8ff", de: "#c8a6ff", best: "#ffffff", cog: "#56d364", soc: "#5ec8ff", diff: "#d2a8ff", warm: "#f0b72f", reject: "#ff7b72" };
+const COL = { agent: "#5ec8ff", de: "#c8a6ff", best: "#ffffff", cog: "#56d364", soc: "#5ec8ff", diff: "#d2a8ff", warm: "#f0b72f", reject: "#ff7b72", cma: "#3ad0c0" };
+
+// Eigendecomposition of a 2x2 symmetric matrix [[a,b],[b,d]]: the two
+// eigenvalues and an orthonormal pair of eigenvectors. CMA-ES needs this to
+// sample from N(0, C) and to form C^{-1/2}.
+function eig2(a, b, d) {
+  const tr = a + d, t2 = (a - d) / 2, disc = Math.sqrt(t2 * t2 + b * b);
+  const l1 = tr / 2 + disc, l2 = tr / 2 - disc;
+  let v1x, v1y;
+  if (Math.abs(b) > 1e-12) { v1x = l1 - d; v1y = b; }
+  else if (a >= d) { v1x = 1; v1y = 0; } else { v1x = 0; v1y = 1; }
+  const nrm = Math.hypot(v1x, v1y) || 1; v1x /= nrm; v1y /= nrm;
+  return { l1: Math.max(l1, 1e-20), l2: Math.max(l2, 1e-20), v1x, v1y, v2x: -v1y, v2y: v1x };
+}
 
 function spread(pts, fn) {
   let mx = 0, my = 0; for (const p of pts) { mx += p.x; my += p.y; }
@@ -249,6 +262,114 @@ export function createSA(fn, p) {
         rings: [{ x: bx, y: by, r: 7, color: COL.best, label: "best" }, { x, y, r: 0.1, color: COL.warm, label: "walker" }],
         links: [],
       };
+    },
+  };
+}
+
+// ============================================================ CMA-ES
+// A faithful 2-D (mu/mu_w, lambda) CMA-ES — the same algorithm as
+// metaheuristics/cma_es.py, specialised to n=2 so the sampling Gaussian can be
+// drawn as an ellipse. Each generation: sample lambda points from N(m, sigma^2 C),
+// keep the best mu, move the mean to their weighted average, then adapt sigma
+// (step size) and C (shape) from the steps that worked.
+export function createCMAES(fn, p) {
+  const rand = rngFrom(p.seed ?? 4242);
+  const n = 2;
+  const lam = Math.max(4, p.n | 0);
+  const mu = Math.max(1, lam >> 1);
+  const wRaw = []; for (let i = 1; i <= mu; i++) wRaw.push(Math.log(mu + 0.5) - Math.log(i));
+  const wSum = wRaw.reduce((s, v) => s + v, 0);
+  const w = wRaw.map((v) => v / wSum);
+  const muEff = 1 / w.reduce((s, v) => s + v * v, 0);
+  const cS = (muEff + 2) / (n + muEff + 5);
+  const dS = 1 + 2 * Math.max(0, Math.sqrt((muEff - 1) / (n + 1)) - 1) + cS;
+  const cC = (4 + muEff / n) / (n + 4 + 2 * muEff / n);
+  const c1 = 2 / ((n + 1.3) ** 2 + muEff);
+  const cMu = Math.min(1 - c1, 2 * (muEff - 2 + 1 / muEff) / ((n + 2) ** 2 + muEff));
+  const chiN = Math.sqrt(n) * (1 - 1 / (4 * n) + 1 / (21 * n * n));
+  const span = fn.hi - fn.lo, box = (v) => clamp(v, fn.lo, fn.hi);
+
+  let mx = fn.lo + (0.16 + 0.68 * rand()) * span, my = fn.lo + (0.16 + 0.68 * rand()) * span;
+  let sigma = (p.sig ?? 0.3) * span;
+  let c11 = 1, c12 = 0, c22 = 1;
+  let pSx = 0, pSy = 0, pCx = 0, pCy = 0;
+  let bx = mx, by = my, bf = fn.f(mx, my);
+  let samples = [{ x: mx, y: my }], meanOld = { x: mx, y: my }, axisRatio = 1;
+
+  return {
+    iter: 0, params: p, stepsPerTick: 1,
+    get best() { return bf; },
+    status() {
+      if (this.iter === 0) return "Generation 0: an isotropic Gaussian N(m, σ²I) over the box.";
+      if (axisRatio < 1.6) return "Sample λ, keep the best μ, slide the mean. The ellipse is still roughly round.";
+      if (axisRatio < 4) return "The covariance is stretching along the direction that keeps paying off.";
+      return "A long, aligned ellipse: the search has learned the valley's local metric.";
+    },
+    step() {
+      this.iter++;
+      const E = eig2(c11, c12, c22);
+      const D1 = Math.sqrt(E.l1), D2 = Math.sqrt(E.l2);
+      axisRatio = Math.sqrt(Math.max(E.l1, E.l2) / Math.min(E.l1, E.l2));
+      const cand = [];
+      for (let k = 0; k < lam; k++) {
+        const z1 = gauss(rand), z2 = gauss(rand);
+        const yx = z1 * D1 * E.v1x + z2 * D2 * E.v2x;
+        const yy = z1 * D1 * E.v1y + z2 * D2 * E.v2y;       // y ~ N(0, C)
+        const x = box(mx + sigma * yx), y = box(my + sigma * yy);
+        cand.push({ x, y, yx, yy, f: fn.f(x, y) });
+      }
+      cand.sort((a, b) => a.f - b.f);
+      if (cand[0].f < bf) { bf = cand[0].f; bx = cand[0].x; by = cand[0].y; }
+
+      let ywx = 0, ywy = 0;                                  // weighted recombination, in y-space
+      for (let i = 0; i < mu; i++) { ywx += w[i] * cand[i].yx; ywy += w[i] * cand[i].yy; }
+      meanOld = { x: mx, y: my };
+      mx = box(mx + sigma * ywx); my = box(my + sigma * ywy);
+
+      // step-size path: needs C^{-1/2} y_w, easy in the eigenbasis
+      const a1 = ywx * E.v1x + ywy * E.v1y, a2 = ywx * E.v2x + ywy * E.v2y;
+      const cinvx = (a1 / D1) * E.v1x + (a2 / D2) * E.v2x;
+      const cinvy = (a1 / D1) * E.v1y + (a2 / D2) * E.v2y;
+      const ks = Math.sqrt(cS * (2 - cS) * muEff);
+      pSx = (1 - cS) * pSx + ks * cinvx; pSy = (1 - cS) * pSy + ks * cinvy;
+      const pSn = Math.hypot(pSx, pSy);
+      sigma *= Math.exp((cS / dS) * (pSn / chiN - 1));
+
+      const hsig = (pSn / Math.sqrt(1 - Math.pow(1 - cS, 2 * this.iter)) / chiN) < (1.4 + 2 / (n + 1)) ? 1 : 0;
+      const kc = Math.sqrt(cC * (2 - cC) * muEff);
+      pCx = (1 - cC) * pCx + hsig * kc * ywx; pCy = (1 - cC) * pCy + hsig * kc * ywy;
+
+      let r11 = 0, r12 = 0, r22 = 0;                         // rank-mu
+      for (let i = 0; i < mu; i++) { r11 += w[i] * cand[i].yx * cand[i].yx; r12 += w[i] * cand[i].yx * cand[i].yy; r22 += w[i] * cand[i].yy * cand[i].yy; }
+      const dh = (1 - hsig) * cC * (2 - cC), keep = 1 - c1 - cMu;
+      c11 = keep * c11 + c1 * (pCx * pCx + dh * c11) + cMu * r11;
+      c12 = keep * c12 + c1 * (pCx * pCy + dh * c12) + cMu * r12;
+      c22 = keep * c22 + c1 * (pCy * pCy + dh * c22) + cMu * r22;
+
+      samples = cand.map((c) => ({ x: c.x, y: c.y }));
+    },
+    info() {
+      return [["best f", bf.toExponential(2)], ["σ (step)", sigma.toExponential(2)],
+        ["axis ratio √(λ₁/λ₂)", axisRatio.toFixed(2)], ["λ / μ", `${lam} / ${mu}`]];
+    },
+    frame() {
+      const E = eig2(c11, c12, c22);
+      const D1 = Math.sqrt(E.l1), D2 = Math.sqrt(E.l2);
+      const Ax = sigma * D1 * E.v1x, Ay = sigma * D1 * E.v1y;   // 1σ semi-axes, domain coords
+      const Bx = sigma * D2 * E.v2x, By = sigma * D2 * E.v2y;
+      const dots = samples.map((s) => ({ x: s.x, y: s.y, r: 3, color: COL.cma }));
+      const ellipses = [
+        { cx: mx, cy: my, ax: 2 * Ax, ay: 2 * Ay, bx: 2 * Bx, by: 2 * By, color: COL.cma, alpha: 0.3 },
+        { cx: mx, cy: my, ax: Ax, ay: Ay, bx: Bx, by: By, color: COL.cma, alpha: 0.85, fill: true },
+      ];
+      const rings = [
+        { x: mx, y: my, r: 5, color: COL.cma, label: "mean m" },
+        { x: bx, y: by, r: 7, color: COL.best, label: "best" },
+      ];
+      const links = this.iter > 0
+        ? [{ x1: meanOld.x, y1: meanOld.y, x2: mx, y2: my, color: COL.best, width: 1.6, dash: [4, 3], arrow: true }]
+        : [];
+      return { dots, rings, links, ellipses };
     },
   };
 }

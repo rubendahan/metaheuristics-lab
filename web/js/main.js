@@ -2,7 +2,7 @@
 // steps, but the harness TWEENS between successive frame()s with easing, so the
 // motion is slow and readable. A live state panel surfaces the maths.
 import { FUNCS, makeMapper, renderLandscape, setupCanvas, tag, lerp, easeInOut } from "./landscape.js";
-import { createPSO, createGA, createDE, createSA } from "./algos.js";
+import { createPSO, createGA, createDE, createSA, createCMAES } from "./algos.js";
 import { createBayes } from "./bayes.js";
 import { mountTrap } from "./intro.js";
 
@@ -63,6 +63,18 @@ const CONFIGS = {
     ],
     legend: [["#f0b72f", "walker / accepted"], ["#ff7b72", "rejected"], ["#fff", "best"]],
   },
+  cmaes: {
+    title: "CMA-ES",
+    factory: createCMAES,
+    funcKeys: ["rosenbrock", "ackley", "himmelblau", "sphere"],
+    defaults: { n: 12, sig: 0.3 },
+    rebuildOn: ["n", "sig"],
+    controls: [
+      Sld("n", "samples  λ", 6, 40, 1, 12, "candidates drawn per generation", (v) => v | 0),
+      Sld("sig", "initial step  σ₀", 0.08, 0.6, 0.02, 0.3, "as a fraction of the box width", (v) => v.toFixed(2)),
+    ],
+    legend: [["#3ad0c0", "sample xₖ"], ["#3ad0c0", "1σ / 2σ ellipse"], ["#fff", "mean m / best"]],
+  },
 };
 
 // ---- generic frame tween + draw ----------------------------------------
@@ -73,6 +85,10 @@ function tweenFrame(a, b, e) {
     rings: arr(a.rings || [], b.rings || [], (p, q) => ({ ...q, x: lerp(p.x, q.x, e), y: lerp(p.y, q.y, e) })),
     links: arr(a.links || [], b.links || [], (p, q) => ({
       ...q, x1: lerp(p.x1, q.x1, e), y1: lerp(p.y1, q.y1, e), x2: lerp(p.x2, q.x2, e), y2: lerp(p.y2, q.y2, e),
+    })),
+    ellipses: arr(a.ellipses || [], b.ellipses || [], (p, q) => ({
+      ...q, cx: lerp(p.cx, q.cx, e), cy: lerp(p.cy, q.cy, e),
+      ax: lerp(p.ax, q.ax, e), ay: lerp(p.ay, q.ay, e), bx: lerp(p.bx, q.bx, e), by: lerp(p.by, q.by, e),
     })),
   };
 }
@@ -112,6 +128,27 @@ function drawTrails(ctx, map, frames) {
 }
 
 function drawFrame(ctx, map, fr, pulse = 0) {
+  // sampling ellipses (CMA-ES): trace the contour in domain coords and map each
+  // point, so the curve is correct even when px/unit differs on the two axes.
+  for (const el of fr.ellipses || []) {
+    ctx.save();
+    ctx.beginPath();
+    const N = 60;
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * TAU;
+      const dx = el.cx + Math.cos(t) * el.ax + Math.sin(t) * el.bx;
+      const dy = el.cy + Math.cos(t) * el.ay + Math.sin(t) * el.by;
+      const [px, py] = map.toPx(dx, dy);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (el.fill) { ctx.globalAlpha = 0.1; ctx.fillStyle = el.color; ctx.fill(); }
+    ctx.globalAlpha = el.alpha != null ? el.alpha : 0.8;
+    ctx.strokeStyle = el.color; ctx.lineWidth = 1.6;
+    if (el.fill) { ctx.shadowColor = el.color; ctx.shadowBlur = 8; }
+    ctx.stroke();
+    ctx.restore();
+  }
   for (const l of fr.links || []) {
     const [x1, y1] = map.toPx(l.x1, l.y1), [x2, y2] = map.toPx(l.x2, l.y2);
     ctx.save();
@@ -263,7 +300,8 @@ function mount2D(root, key) {
   }
 
   C.sel.addEventListener("change", () => { rebuild(); refreshPanel(); });
-  for (const id in C.inputs) C.inputs[id].addEventListener("input", () => { if (id === "n") { rebuild(); refreshPanel(); } else algo.params = readParams(); });
+  const rebuildKeys = cfg.rebuildOn || ["n"];
+  for (const id in C.inputs) C.inputs[id].addEventListener("input", () => { if (rebuildKeys.includes(id)) { rebuild(); refreshPanel(); } else algo.params = readParams(); });
   C.spdSel.addEventListener("change", () => { tickMs = SPEEDS[C.spdSel.value]; });
   C.play.addEventListener("click", () => { running = !running; C.play.textContent = running ? "❚❚" : "▶"; if (running) tStart = performance.now(); });
   C.step.addEventListener("click", () => { if (running) { running = false; C.play.textContent = "▶"; } advance(); paint(1); });
