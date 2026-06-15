@@ -89,7 +89,7 @@
   <p>
     You hand the objective a full decision vector and it hands back one number. You do
     not get a formula, a derivative, or any look inside. The only way to learn anything
-    is to ask — and every question costs five seconds of simulation:
+    is to ask, and every question costs about five seconds of simulation:
   </p>
 
   <div class="fig">
@@ -124,9 +124,9 @@
     </svg>
   </div>
   <p class="caption">
-    <b>fig.</b> — the whole interface: a 341-number plan goes in, one scalar comes out.
-    No internal structure is exposed, so classical tools that need \(\nabla f\) — gradient
-    descent, Newton, linear programming — simply do not apply.
+    <b>fig.</b> The interface in full: a 341-number plan goes in, one scalar comes out.
+    Nothing inside is exposed, so the classical tools that need \(\nabla f\), such as
+    gradient descent, Newton's method, or linear programming, do not apply here.
   </p>
 
   <p>
@@ -136,8 +136,8 @@
     evaluations. This is the exact niche of <b>metaheuristics</b>: stochastic search
     strategies that trade optimality guarantees for a very good solution within a fixed
     budget. Each one is a different policy for the same dilemma,
-    <b>exploration versus exploitation</b> — sampling unknown regions versus refining the
-    best one found so far. The sections below show each policy as an update rule, a
+    <b>exploration versus exploitation</b>: sampling unknown regions against refining the
+    best point found so far. The sections below give each policy as an update rule, a
     schematic, and a demo you can drive.
   </p>
 </section>
@@ -159,20 +159,20 @@
   </div>
   <p class="fignote">
     \(\eta\) is the step size. The update only ever moves toward lower \(f\), so it can
-    halt at <em>any</em> point where the slope vanishes — a global minimum, yes, but
-    equally a local one.
+    stop at <em>any</em> point where the slope vanishes. That might be the global
+    minimum, but it might just as easily be a local one.
   </p>
 
   <p>
     Below is a 1-D objective with several dips of different depths. Each gray point
     starts at a fixed spot and runs exactly that update. The coloured trail traces where
-    it ends up — reliably <i>a</i> minimum, namely the nearest one, with no knowledge
-    that a deeper basin exists elsewhere.
+    it ends up. Every point reaches <i>a</i> minimum, but only the nearest one, with no
+    knowledge that a deeper basin exists elsewhere.
   </p>
 
   <div class="demo" data-demo="trap"></div>
   <p class="caption">
-    <b>fig.</b> — thirteen greedy descents on one bumpy objective. Each settles into the
+    <b>fig.</b> Thirteen greedy descents on one bumpy objective. Each settles into the
     basin it happened to start in; only the few that began inside the global basin
     (green) reach the true optimum, the rest stop short (red).
   </p>
@@ -211,12 +211,11 @@
   <h3>One particle's update</h3>
   <p>
     Particle \(i\) carries a position \(\mathbf{x}_i\) and a velocity \(\mathbf{v}_i\).
-    The velocity is rebuilt each iteration from three terms — the
+    Each iteration the velocity is rebuilt from three terms: the
     <strong style="color:var(--gold)">inertia</strong> it already had, a
     <strong style="color:var(--green)">cognitive</strong> pull toward its own best
     \(\mathbf{p}_i\), and a <strong style="color:var(--blue)">social</strong> pull
-    toward the global best \(\hat{\mathbf{g}}\) — and then the position simply follows
-    the velocity:
+    toward the global best \(\hat{\mathbf{g}}\). The position then follows the velocity:
   </p>
 
   <div class="mathblock">
@@ -265,7 +264,7 @@
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 1</b> — the new velocity \(\mathbf{v}_i\) is the tip-to-tail sum of carried
+    <b>fig. 1.</b> The new velocity \(\mathbf{v}_i\) is the tip-to-tail sum of carried
     momentum (gold), the pull toward the particle's own best \(\mathbf{p}_i\) (green),
     and the pull toward the swarm best \(\hat{\mathbf{g}}\) (blue). Their resultant
     carries the particle from \(\mathbf{x}_i\) to \(\mathbf{x}_i + \mathbf{v}_i\). The
@@ -277,13 +276,13 @@
     The dial that sets exploration against exploitation is the inertia \(w\). High \(w\)
     keeps velocities large and the swarm roams; low \(w\) lets the two pulls win and the
     swarm collapses onto \(\hat{\mathbf{g}}\). Making \(c_2\) large relative to \(c_1\)
-    turns every particle into a follower of the global best — fast to converge, but prone
-    to <em>premature convergence</em>: the swarm agrees before it has explored.
+    turns every particle into a follower of the global best. That converges fast, but it
+    invites <em>premature convergence</em>: the swarm agrees before it has explored.
   </p>
 
   <div class="demo" data-demo="pso"></div>
   <p class="caption">
-    <b>live</b> — the two bold arrows are drawn on one highlighted particle so you can
+    <b>live.</b> The two bold arrows are drawn on one highlighted particle, so you can
     watch its velocity being assembled; the faint blue arrows are the velocity field
     \(\mathbf{v}_i\) of the whole swarm. The side panel tracks the swarm spread, which
     collapses as the social term takes over.
@@ -307,9 +306,9 @@
   <h3>The loop</h3>
   <p>
     A population of candidate solutions evolves generation by generation. Each new
-    generation is built by three operators, in order — pick promising parents, blend
-    them into children, then perturb the children slightly — while a few of the very
-    best survive untouched (<b>elitism</b>) so progress is never lost.
+    generation is built by three operators in order: pick promising parents, blend them
+    into children, then perturb the children a little. A few of the very best survive
+    untouched (<b>elitism</b>), so progress is never lost.
   </p>
 
   <div class="pseudo"><span class="lbl">one generation</span><span class="kw">for</span> each offspring slot (after copying the elite):
@@ -353,9 +352,9 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 1</b> — three individuals are sampled (gold rings); the greenest wins and
+    <b>fig. 1.</b> Three individuals are sampled (gold rings); the greenest wins and
     becomes a parent. Raising \(k\) samples more each time, so the winner is almost
-    always near-elite — more pressure, less diversity.
+    always near the top, with more pressure and less diversity.
   </p>
 
   <h3>Recombination: BLX-&#945; crossover</h3>
@@ -399,10 +398,10 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 2</b> — the green band is the parent interval \([m_j, M_j]\); the blue band
+    <b>fig. 2.</b> The green band is the parent interval \([m_j, M_j]\); the blue band
     extends it by \(\alpha d_j\) on each side. The child is drawn uniformly across the
-    whole blue band, so it can land beyond either parent (here, to the left) — mild
-    extrapolation that keeps the search from shrinking too fast.
+    whole blue band, so it can land beyond either parent (here, to the left). That mild
+    extrapolation keeps the search from shrinking too fast.
   </p>
 
   <h3>Mutation &amp; elitism</h3>
@@ -417,8 +416,8 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <div class="demo" data-demo="ga"></div>
   <p class="caption">
-    <b>live</b> — the cloud is colour-coded by fitness; one mating per generation is
-    highlighted (two gold parents → a green child). The panel's <em>diversity</em>
+    <b>live.</b> The cloud is colour-coded by fitness; one mating per generation is
+    highlighted (two gold parents give a green child). The panel's <em>diversity</em>
     reading is the spread that lets a GA cover several basins at once.
   </p>
 
@@ -439,7 +438,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <h3>Mutation: a difference vector</h3>
   <p>
-    DE's signature is that its step size is not a parameter at all — it is read off the
+    DE's signature is that its step size is not a parameter at all. It is read off the
     population itself. To mutate, pick three other members at random and add a
     \(F\)-scaled copy of the difference between two of them to the third:
   </p>
@@ -472,9 +471,9 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 1</b> — the donor \(\mathbf{v}\) is the base point \(\mathbf{x}_a\) plus the
-    difference \(\mathbf{x}_b - \mathbf{x}_c\) scaled by \(F\). Because that difference is
-    large when the population is spread out and small once it has clustered, the step
+    <b>fig. 1.</b> The donor \(\mathbf{v}\) is the base point \(\mathbf{x}_a\) plus the
+    difference \(\mathbf{x}_b - \mathbf{x}_c\) scaled by \(F\). That difference is large
+    when the population is spread out and small once it has clustered, so the step
     <em>self-scales</em>: big exploratory moves early, fine refinement late, with no
     schedule to tune.
   </p>
@@ -562,7 +561,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 2</b> — per coordinate: \(\checkmark\) means \(\text{rand}\le CR\) so the
+    <b>fig. 2.</b> Per coordinate: \(\checkmark\) means \(\text{rand}\le CR\), so the
     trial copies the <span style="color:var(--green)">donor</span>; \(\times\) means it
     keeps the <span style="color:var(--fg-dim)">target</span>. The gold \(\star\) is the
     forced coordinate \(j_{\text{rand}}\). High \(CR\) takes mostly donor (good when
@@ -581,7 +580,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <div class="demo" data-demo="de"></div>
   <p class="caption">
-    <b>live</b> — the donor construction is drawn on one target each step: the purple
+    <b>live.</b> The donor construction is drawn on one target each step: the purple
     difference vector and the green donor. The panel's <em>mean \(|\mathbf{x}_b -
     \mathbf{x}_c|\)</em> is the step size, and you can watch it decay on its own as the
     cloud contracts.
@@ -605,8 +604,8 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   <p>
     One walker proposes a random neighbour each step. If the move improves the objective
     (\(\Delta E \le 0\)) it is always taken. A <em>worsening</em> move is not rejected
-    outright — it is accepted with a probability that shrinks with how much worse it is,
-    and grows with the temperature \(T\):
+    outright. It is accepted with a probability that shrinks as the move gets worse and
+    grows with the temperature \(T\):
   </p>
 
   <div class="mathblock">
@@ -648,7 +647,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig.</b> — acceptance probability for a worsening move. Improving moves
+    <b>fig.</b> Acceptance probability for a worsening move. Improving moves
     (\(\Delta E \le 0\), green shelf) are always taken. For uphill moves, a
     <span style="color:var(--blue)">hot</span> chain still says yes fairly often; a
     <span style="color:var(--red)">cold</span> one almost always says no. Cooling is just
@@ -666,12 +665,12 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   <p class="fignote">
     Too fast (small \(\alpha\)) and the chain <em>quenches</em> into the first basin it
     finds; too slow and it wastes the evaluation budget wandering. Annealing buys the
-    escape-local-minima property at the price of a single point — no population to carry.
+    ability to escape local minima with a single point, and carries no population.
   </p>
 
   <div class="demo" data-demo="sa"></div>
   <p class="caption">
-    <b>live</b> — the panel shows \(\Delta E\) and \(P(\text{accept})\) each step. The
+    <b>live.</b> The panel shows \(\Delta E\) and \(P(\text{accept})\) each step. The
     yellow trail is the chain; red flickers are rejected proposals. Early on, while hot,
     you will catch it accepting clearly uphill moves.
   </p>
@@ -704,7 +703,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   </div>
   <p class="fignote">
     \(\mathbf{x}_{k:\lambda}\) is the \(k\)-th best candidate of the generation. Only the
-    <em>ranking</em> matters, never the raw values — which is what makes CMA-ES invariant
+    <em>ranking</em> matters, never the raw values. That is what makes CMA-ES invariant
     to any monotone rescaling of \(f\).
   </p>
 
@@ -713,8 +712,8 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     The interesting part is the covariance \(\mathbf{C}\). Each generation it is tilted
     toward the directions that just produced improvement. On a curved, ill-conditioned valley
     the sampling ellipse stops being a round blob and becomes a long, thin, rotated shape
-    aligned with the valley floor — the algorithm has effectively learned the local
-    second-order metric, gradient-free:
+    aligned with the valley floor. In effect the algorithm has learned the local
+    second-order metric without ever computing a gradient:
   </p>
 
   <div class="fig">
@@ -746,7 +745,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig.</b> — the same Gaussian over three generations on a curved valley. It begins
+    <b>fig.</b> The same Gaussian over three generations on a curved valley. It begins
     round (<span style="color:var(--blue)">gen 1</span>), elongates and rotates as the
     covariance picks up the productive direction (<span style="color:var(--gold)">gen
     5</span>), and ends as a long thin ellipse tracking the valley toward the optimum
@@ -766,7 +765,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <div class="demo" data-demo="cmaes"></div>
   <p class="caption">
-    <b>live</b> — the filled teal ellipse is the \(1\sigma\) contour of the sampling
+    <b>live.</b> The filled teal ellipse is the \(1\sigma\) contour of the sampling
     Gaussian and the faint ring is \(2\sigma\); the dots are one generation's \(\lambda\)
     samples, and the dashed arrow is the step the mean just took. On Rosenbrock the
     ellipse starts round and slowly turns into a thin diagonal sliver lying along the
@@ -802,8 +801,8 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <h3>The surrogate loop</h3>
   <p>
-    When a single evaluation is genuinely expensive — a simulation, a training run, a lab
-    experiment — you can afford only tens of them. Bayesian optimization makes each one
+    When a single evaluation is genuinely expensive, say a simulation, a training run, or a
+    lab experiment, you can afford only tens of them. Bayesian optimization makes each one
     count: it fits a cheap probabilistic <em>model</em> of the objective and uses that
     model to choose where the next evaluation should go.
   </p>
@@ -833,7 +832,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 1</b> — the loop. Everything except the gold box is cheap arithmetic. You
+    <b>fig. 1.</b> The loop. Everything except the gold box is cheap arithmetic. You
     spend that arithmetic on the model and the acquisition so the one expensive call
     lands somewhere worth it.
   </p>
@@ -851,14 +850,14 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   </div>
   <p class="fignote">
     \(\mathbf{k}(x)_i = k(x, x_i)\). At an observation, \(\mu\) is pinned to the data and
-    \(\sigma\) collapses to \(\sim\!0\); far from any data, \(\sigma\) swells — and that
+    \(\sigma\) collapses to \(\sim\!0\). Far from any data \(\sigma\) swells, and that
     swelling is exactly what the acquisition will chase.
   </p>
 
   <p>
     The kernel encodes the smoothness prior. The common RBF choice makes nearby inputs
     strongly correlated, with a <em>length scale</em> \(\ell\) that sets how fast that
-    correlation falls off — i.e. how wiggly the GP believes \(f\) is:
+    correlation falls off, that is, how wiggly the GP believes \(f\) is:
   </p>
 
   <div class="mathblock">
@@ -882,7 +881,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig. 2</b> — the RBF kernel as a function of distance. A
+    <b>fig. 2.</b> The RBF kernel as a function of distance. A
     <span style="color:var(--gold)">small \(\ell\)</span> de-correlates points quickly, so
     the GP trusts its own interpolation only very locally; a
     <span style="color:var(--blue)">large \(\ell\)</span> assumes a smooth function and
@@ -902,12 +901,12 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   <p class="fignote">
     \(\Phi, \phi\) are the standard-normal CDF and PDF; \(\xi\) is a margin that tilts the
     balance. The first term rewards a low predicted mean, the second rewards high
-    uncertainty — so EI keeps probing unexplored regions instead of only the current best.
+    uncertainty, so EI keeps probing unexplored regions instead of only the current best.
   </p>
 
   <div class="demo" data-demo="bayes"></div>
   <p class="caption">
-    <b>live</b> — the dashed curve is the hidden objective, blue is the GP mean, the band
+    <b>live.</b> The dashed curve is the hidden objective, blue is the GP mean, the band
     is \(\pm 2\sigma\), and green is EI. Each <em>sample next</em> evaluates \(f\) at the
     EI maximizer (white line) and you watch the band collapse there.
   </p>
@@ -979,7 +978,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig.</b> — where each optimizer is the natural choice. Bayesian optimization owns
+    <b>fig.</b> Where each optimizer is the natural choice. Bayesian optimization fits
     the few-evaluations regime; CMA-ES the smooth, ill-conditioned middle; DE the generic
     centre; GA and PSO the rugged, multimodal corner; SA and hill-climbing the cheap,
     single-point baselines. The full decision rule:
@@ -1031,7 +1030,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
 
   <h3>The ceiling was flat</h3>
   <p>
-    The objective <em>had</em> an enormous cost range — you can build a genuinely
+    The objective <em>did</em> have an enormous cost range; you can build a genuinely
     terrible plan. But every <em>reasonable</em> plan landed in a thin band just above the
     optimum, so all our sophistication moved the score by less than a percent:
   </p>
@@ -1066,7 +1065,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     </svg>
   </div>
   <p class="caption">
-    <b>fig.</b> — the cost range is huge (a bad plan sits far above), but the
+    <b>fig.</b> The cost range is huge (a bad plan sits far above), but the
     <span style="color:var(--gold)">do-nothing "all-green" baseline</span> already lands
     in the thin band just over the optimum, and the
     <span style="color:var(--blue)">full optimizer arsenal</span> only shaves a sliver off
