@@ -2,7 +2,7 @@
 
 ## 0.1.0, 2026-06-13
 
-Initial release. Extracted and cleaned up from the Delta 2026 hackathon
+Initial release. Extracted and cleaned up from the Delta 2026 competition
 traffic-optimization project.
 
 ### Added

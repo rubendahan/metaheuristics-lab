@@ -6,7 +6,7 @@
 
 A hands-on tour of black-box optimisation: seven metaheuristics, the theory behind
 each one, and live demos you can drive in the browser. It grew out of a city
-traffic problem at the **Delta 2026 hackathon**, which is also here, optimiser and
+traffic problem at the **Delta 2026 competition**, which is also here, optimiser and
 all.
 
 **[▶ Open the explainer](https://rubendahan.github.io/without-a-gradient/)**  ·  **[▶ Try the Delta demo](https://rubendahan.github.io/without-a-gradient/delta/)**

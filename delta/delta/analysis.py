@@ -1,6 +1,6 @@
 """The flat-ceiling diagnostic, "characterize the objective before optimising".
 
-This module reproduces the central finding of the Delta 2026 hackathon. After
+This module reproduces the central finding of the Delta 2026 competition. After
 throwing a whole toolbox of metaheuristics at the signal-timing problem, the
 team's most valuable result was not a clever optimiser but a *characterisation
 of the objective*:

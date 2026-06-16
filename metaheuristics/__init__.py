@@ -24,7 +24,7 @@ Available optimizers
 * :class:`CMAES`                             , covariance matrix adaptation ES
 * :class:`BayesianOptimization`              , GP-surrogate Bayesian optimization
 
-Born from the Delta 2026 hackathon, where this whole toolbox was thrown at a
+Born from the Delta 2026 competition, where this whole toolbox was thrown at a
 traffic-signal problem; cleaned up here into something reusable. See the project
 story in ``docs/``.
 """

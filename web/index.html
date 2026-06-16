@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Black-box optimization, visualized · metaheuristics from the Delta hackathon</title>
-  <meta name="description" content="An interactive, math-forward tour of the metaheuristics we used at the Delta 2026 hackathon: particle swarm, genetic algorithms, differential evolution, simulated annealing, CMA-ES and Bayesian optimization. Update rules, pseudocode, and live in-browser demos that show each operator." />
+  <title>Black-box optimization, visualized · metaheuristics from the Delta competition</title>
+  <meta name="description" content="An interactive, math-forward tour of the metaheuristics we used at the Delta 2026 competition: particle swarm, genetic algorithms, differential evolution, simulated annealing, CMA-ES and Bayesian optimization. Update rules, pseudocode, and live in-browser demos that show each operator." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
   <!-- KaTeX for typeset math (CDN, no build step) -->
@@ -17,7 +17,7 @@
 
 <header class="hero">
   <div class="wrap">
-    <div class="kicker">🐝 a Delta 2026 hackathon spin-off</div>
+    <div class="kicker">🐝 a Delta 2026 competition spin-off</div>
     <h1>Optimizing a function<br /><span class="grad">you're not allowed to differentiate.</span></h1>
     <p class="sub">
       You get no gradient, no convexity, no formula. You can plug in a point, read back
@@ -71,7 +71,7 @@
   <p class="lede">Minimize <span class="vec">f</span> : ℝ<sup>d</sup> → ℝ, given nothing but the right to query it.</p>
 
   <p>
-    All of this came out of <b>Delta 2026</b>, a hackathon. Task D: retime the traffic
+    All of this came out of <b>Delta 2026</b>, a competition. Task D: retime the traffic
     signals of a real city so a fleet of vehicles loses as little time as possible
     over a four-hour simulation. There was no analytic objective. There was a
     mesoscopic traffic simulator. You submit a full signal plan, it runs the city,
@@ -1073,14 +1073,14 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
   </p>
 
   <p>
-    Which is the most useful thing the hackathon could have taught us, and exactly the
+    Which is the most useful thing the competition could have taught us, and exactly the
     point of the callout above: <b>characterize the objective before optimizing it</b>.
     We spent days tuning swarms; an afternoon of demand analysis would have shown the
     ceiling was flat.
   </p>
   <p>
     The contest solution was disposable. The toolbox was not. We pulled the algorithms
-    out of the hackathon code, reimplemented them cleanly against standard benchmark
+    out of the competition code, reimplemented them cleanly against standard benchmark
     functions where their behavior is legible, tested them, and built this page so the
     mechanics stick. Everything here runs the real algorithm, live.
   </p>
@@ -1109,7 +1109,7 @@ next generation <span class="op">&#8592;</span> elite &#8746; offspring</div>
     this explainer. MIT licensed.
   </p>
   <p>
-    Built from the Delta 2026 hackathon traffic-optimization project. Every demo runs
+    Built from the Delta 2026 competition traffic-optimization project. Every demo runs
     the real algorithm client-side, no server and no build step. Demo source is in
     <code>web/js/</code>.
   </p>

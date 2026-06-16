@@ -1,6 +1,6 @@
 // The flat-ceiling diagnostic: characterise the objective before optimising it.
 //
-// This reproduces the central finding of the Delta hackathon. After throwing a
+// This reproduces the central finding of the Delta competition. After throwing a
 // whole toolbox of metaheuristics at the signal-timing problem, the most
 // valuable result was not a clever optimiser but a characterisation of the
 // objective: for the given demand the network sat so far below saturation that

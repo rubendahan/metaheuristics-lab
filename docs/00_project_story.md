@@ -1,8 +1,8 @@
 # 00, Project story
 
-## The hackathon
+## The competition
 
-This library was extracted from the **Delta 2026 hackathon**, Task D: a
+This library was extracted from the **Delta 2026 competition**, Task D: a
 traffic-signal optimization problem on a real city road network (Zagreb).
 
 The task, in numbers:
@@ -63,7 +63,7 @@ us the ceiling was nearly flat.
 The contest answer was throwaway, but two things were worth keeping:
 
 1. **The toolbox**: reusable implementations of seven optimizers behind one API.
-   Pulled out of the one-off hackathon scripts, rewritten against standard
+   Pulled out of the one-off competition scripts, rewritten against standard
    benchmark functions (where each algorithm's character actually shows),
    documented, and tested.
 2. **The understanding**: the theory of how each method balances exploration vs.
@@ -75,7 +75,7 @@ real (if anticlimactic) optimization war story.
 
 ## Provenance
 
-The original hackathon repository (not included here) contained ~40 solver scripts,
+The original competition repository (not included here) contained ~40 solver scripts,
 a reverse-engineered simulator, and a results archive. This library re-implements
 the *general* algorithms and discards everything Delta-specific. Nothing here
 depends on the traffic problem; it's all standard continuous black-box optimization.

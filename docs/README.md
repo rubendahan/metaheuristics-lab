@@ -6,7 +6,7 @@ reference.
 
 | Doc | What's in it |
 |---|---|
-| [00, Project story](00_project_story.md) | Where the library came from: the Delta 2026 hackathon, what we built, and the postmortem. |
+| [00, Project story](00_project_story.md) | Where the library came from: the Delta 2026 competition, what we built, and the postmortem. |
 | [01, Algorithms & theory](01_algorithms.md) | The theory behind every optimizer (PSO, GA, DE, SA, CMA-ES, Bayesian, hill climbing), with the update equations and tuning notes. |
 | [02, API reference](02_api_reference.md) | `Bounds`, `Result`, `Optimizer`, and every optimizer's constructor parameters. |
 | [03, Benchmarks](03_benchmarks.md) | The six standard test landscapes and what each one stresses. |

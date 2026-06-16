@@ -9,7 +9,7 @@ description = "Delta 2026 competition deliverable (Delta was sponsored by Mireo)
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Delta 2026 hackathon team" }]
+authors = [{ name = "Delta 2026 competition team" }]
 keywords = [
     "traffic-signals", "signal-timing", "black-box-optimization",
     "particle-swarm", "metaheuristics", "webster-delay", "mireo", "delta-2026",
